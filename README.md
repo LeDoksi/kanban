@@ -32,7 +32,7 @@ MCP-сервер запускается Claude Code сам, вручную ег�
 Два способа подключить:
 
 **Через `.mcpb` (проще)** — Claude Desktop → Settings → Extensions →
-Advanced settings → Install Extension… → `mcp/kanban.mcpb` (собирается из
+Advanced settings → Install Extension… → `mcp/mcp.mcpb` (собирается из
 `mcp/manifest.json`, см. план №2). Ключи вводятся в открывшейся форме.
 
 **Через терминал:**
