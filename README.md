@@ -1,0 +1,36 @@
+# Канбан
+
+Личная доска задач по проектам. Владелец заводит задачи с телефона,
+Claude Code ведёт их через MCP.
+
+Доска: https://ledoksi.github.io/kanban/
+
+## Что где
+
+- `supabase/migrations/` — схема базы, индексы, RLS
+- `mcp/` — MCP-сервер: шесть инструментов для агента
+- `web/` — веб-клиент на Vite, деплоится на GitHub Pages через
+  `.github/workflows/deploy.yml`
+- `docs/superpowers/specs/` — спека
+- `docs/superpowers/plans/` — планы
+
+## Запуск
+
+```bash
+cd web && npm run dev     # сайт на localhost:5173
+cd mcp && npm test        # тесты парсера планов и форматов вывода
+cd web && npm test        # тест угадывания типа задачи
+```
+
+MCP-сервер запускается Claude Code сам, вручную его поднимать не нужно.
+Подключается один раз:
+
+```bash
+claude mcp add kanban --scope user --env SUPABASE_URL=... --env SUPABASE_SERVICE_KEY=... -- node <путь-до-репозитория>/mcp/src/index.ts
+```
+
+## Доступ
+
+Читать и писать может только владелец — проверка в RLS-политике Postgres,
+а не в коде клиента. Сервисный ключ живёт только в пользовательском
+конфиге MCP и в репозиторий не попадает.

@@ -246,7 +246,7 @@ Supabase Realtime: пока агент работает и пишет через
 | База и auth | Supabase (Postgres, magic-link, RLS, Realtime) |
 | Веб-клиент | React + Vite + TypeScript + Tailwind |
 | Перетаскивание | `@dnd-kit/core` |
-| Хостинг клиента | Netlify, статика |
+| Хостинг клиента | GitHub Pages, статика через GitHub Actions |
 | MCP-сервер | Node + TypeScript, `@modelcontextprotocol/sdk`, транспорт stdio |
 
 MCP-сервер запускается локально на машине владельца и ходит в Supabase напрямую с ключом `service_role`. Промежуточного API-слоя нет: он добавил бы деплой, латентность и точку отказа, ничего не дав единственному пользователю.
