@@ -1,0 +1,35 @@
+{
+  "manifest_version": "0.1",
+  "name": "kanban",
+  "display_name": "Канбан",
+  "version": "1.0.0",
+  "description": "Личная доска задач по проектам — шесть-семь инструментов для ведения канбана из Claude Code.",
+  "author": { "name": "Georgy Shakov" },
+  "server": {
+    "type": "node",
+    "entry_point": "src/index.ts",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/src/index.ts"],
+      "env": {
+        "SUPABASE_URL": "${user_config.supabase_url}",
+        "SUPABASE_SERVICE_KEY": "${user_config.supabase_service_key}"
+      }
+    }
+  },
+  "user_config": {
+    "supabase_url": {
+      "type": "string",
+      "title": "Supabase URL",
+      "description": "https://<project-ref>.supabase.co",
+      "required": true
+    },
+    "supabase_service_key": {
+      "type": "string",
+      "title": "Supabase service key",
+      "description": "Settings → API → Secret keys → default. Хранится только локально.",
+      "required": true,
+      "sensitive": true
+    }
+  }
+}

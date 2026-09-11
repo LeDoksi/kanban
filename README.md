@@ -29,7 +29,13 @@ cd web && npm test        # тест угадывания типа задачи
 ```
 
 MCP-сервер запускается Claude Code сам, вручную его поднимать не нужно.
-Подключается один раз:
+Два способа подключить:
+
+**Через `.mcpb` (проще)** — Claude Desktop → Settings → Extensions →
+Advanced settings → Install Extension… → `mcp/kanban.mcpb` (собирается из
+`mcp/manifest.json`, см. план №2). Ключи вводятся в открывшейся форме.
+
+**Через терминал:**
 
 ```bash
 claude mcp add kanban --scope user --env SUPABASE_URL=... --env SUPABASE_SERVICE_KEY=... -- node <путь-до-репозитория>/mcp/src/index.ts
