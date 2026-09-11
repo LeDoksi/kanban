@@ -34,8 +34,10 @@ export function registerTools(server: McpServer) {
   }, async ({ project, epic }) => {
     const p = await resolveProject(project);
 
-    let q = sb.from('items').select('*')
-      .eq('project_id', p.id).is('archived_at', null);
+    // Архивные тянем тоже: они не показываются в списке (formatBoard
+    // отфильтрует), но считаются в «сделано из всего» — иначе счётчик
+    // едет назад, когда готовые карточки убирают из колонки.
+    let q = sb.from('items').select('*').eq('project_id', p.id);
     if (epic) q = q.eq('epic_id', epic);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
@@ -95,7 +97,6 @@ export function registerTools(server: McpServer) {
     // Номера берутся по одному: next_seq держит блокировку строки проекта,
     // поэтому параллельные сессии не получат одинаковый номер.
     const rows = [];
-    let pos = Date.now() % 1_000_000;
     for (const it of items) {
       const seq = await nextSeq(p.id, 'item');
       const row = {
@@ -109,7 +110,9 @@ export function registerTools(server: McpServer) {
         status: it.status,
         checklist: (it.checklist ?? []).map(t => ({ text: t, done: false })),
         blocks: it.blocks ?? [],
-        position: (pos += 100),
+        // seq монотонен и уникален внутри проекта, шаг 100 оставляет
+        // место вставить карточку между соседними дробной позицией.
+        position: seq * 100,
         created_by: 'claude',
       };
       // Вставляем сразу, а не пачкой в конце: next_seq() видит состояние
@@ -157,7 +160,9 @@ export function registerTools(server: McpServer) {
     if (a.body !== undefined) patch.body = a.body;
     if (a.type) patch.type = a.type;
     if (a.epic !== undefined) patch.epic_id = a.epic;
-    if (a.archive) patch.archived_at = new Date().toISOString();
+    if (a.archive !== undefined) {
+      patch.archived_at = a.archive ? new Date().toISOString() : null;
+    }
 
     // Шаг чеклиста указывается номером (с единицы) или куском текста.
     const mark = (needle: number | string, done: boolean) => {
@@ -187,7 +192,7 @@ export function registerTools(server: McpServer) {
     const what = [
       a.status && `→ ${a.status}`,
       touched.length && `шаг: ${touched.join(', ')}`,
-      a.archive && 'в архив',
+      a.archive !== undefined && (a.archive ? 'в архив' : 'из архива'),
     ].filter(Boolean).join('; ');
     return text(`${a.id} ${what || 'обновлена'}`);
   });
@@ -196,6 +201,10 @@ export function registerTools(server: McpServer) {
     description: 'Записать краткий итог в журнал задачи',
     inputSchema: { id: z.string(), text: z.string() },
   }, async ({ id, text: body }) => {
+    // Без проверки чужой id всплыл бы сырым нарушением внешнего ключа.
+    const check = await sb.from('items').select('id').eq('id', id).single();
+    if (check.error) throw new Error(`Задача ${id} не найдена`);
+
     const { error } = await sb.from('comments')
       .insert({ item_id: id, author: 'claude', body });
     if (error) throw new Error(error.message);
@@ -217,18 +226,25 @@ export function registerTools(server: McpServer) {
       return text(`В ${path} не нашлось задач вида "### Task N: ...". Импорт отменён.`);
     }
 
+    // Повторный вызов на том же файле иначе продублировал бы эпик и все
+    // задачи целиком. План опознаётся по plan_path внутри проекта.
+    const dup = await sb.from('epics').select('id')
+      .eq('project_id', p.id).eq('plan_path', path).maybeSingle();
+    if (dup.data) {
+      return text(`${dup.data.id} уже импортирован из ${path}. Импорт отменён.`);
+    }
+
     const eseq = await nextSeq(p.id, 'epic');
     const epicId = `${p.prefix}-E${eseq}`;
     const e = await sb.from('epics').insert({
       id: epicId, seq: eseq, project_id: p.id,
       title: plan.title, goal: plan.goal || null,
       plan_path: path, spec_path: plan.specPath,
-      position: Date.now() % 1_000_000,
+      position: eseq * 100,
     });
     if (e.error) throw new Error(e.error.message);
 
     const rows = [];
-    let pos = 1000;
     let manual = 0;
 
     for (const t of plan.tasks) {
@@ -238,7 +254,7 @@ export function registerTools(server: McpServer) {
         id, seq, project_id: p.id, epic_id: epicId, type: 'task',
         title: t.title, body: t.body || null, status: 'backlog',
         checklist: t.checklist.map(s => ({ text: s, done: false })),
-        blocks: [], position: (pos += 100), created_by: 'claude',
+        blocks: [], position: seq * 100, created_by: 'claude',
       };
       // Вставляем сразу же, как и в add(): next_seq() иначе не увидит
       // строки, ещё не вставленные из этого же вызова.
@@ -258,7 +274,7 @@ export function registerTools(server: McpServer) {
           epic_id: epicId, type: 'chore', title: m,
           body: `Ручной шаг из задачи «${t.title}».`,
           status: 'waiting', checklist: [], blocks: [id],
-          position: (pos += 100), created_by: 'claude',
+          position: mseq * 100, created_by: 'claude',
         };
         const manualIns = await sb.from('items').insert(manualRow);
         if (manualIns.error) throw new Error(manualIns.error.message);
