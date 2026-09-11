@@ -33,7 +33,7 @@ function SignIn() {
     setState('sending');
     const { error } = await sb.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: window.location.href },
     });
     if (error) { setError(error.message); setState('idle'); return; }
     setState('sent');
