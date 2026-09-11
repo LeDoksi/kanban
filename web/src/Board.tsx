@@ -3,6 +3,7 @@ import { sb } from './supabase';
 import type { Item, Project } from './supabase';
 import { NewTask } from './NewTask';
 import { TaskModal } from './TaskModal';
+import { ArchiveList } from './ArchiveList';
 
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog' },
@@ -11,12 +12,15 @@ const COLUMNS = [
   { key: 'done',    label: 'Готово' },
 ] as const;
 
+const DONE_SHOWN = 5;
+
 export function Board() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [current, setCurrent] = useState<string>('');
   const [items, setItems] = useState<Item[]>([]);
   const [err, setErr] = useState('');
   const [openItem, setOpenItem] = useState<Item | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
 
   // Архивные грузим тоже: из колонок они убраны, но в счётчике остаются —
   // иначе прогресс едет назад, когда готовые карточки уходят в архив.
@@ -43,6 +47,23 @@ export function Board() {
 
   useEffect(() => { reload(current); }, [current]);
 
+  // То же множество «показанных в Готово», что и в рендере колонок —
+  // архив показывает всё остальное: и настоящие архивные карточки, и
+  // готовые сверх видимых DONE_SHOWN.
+  const shownDoneIds = new Set(
+    items
+      .filter(i => i.status === 'done' && !i.archived_at)
+      .sort((a, b) => (b.closed_at ?? '').localeCompare(a.closed_at ?? ''))
+      .slice(0, DONE_SHOWN)
+      .map(i => i.id),
+  );
+  const archivedCount = items.filter(i => i.archived_at).length;
+  const archiveItems = items
+    .filter(i => i.archived_at || (i.status === 'done' && !shownDoneIds.has(i.id)))
+    .sort((a, b) =>
+      (b.closed_at ?? b.archived_at ?? '')
+        .localeCompare(a.closed_at ?? a.archived_at ?? ''));
+
   return (
     <div className="min-h-dvh p-4 md:p-6 max-w-6xl mx-auto">
       <header className="flex items-center gap-3 mb-5">
@@ -68,12 +89,24 @@ export function Board() {
       {/* Телефон — одна вертикаль, десктоп — четыре колонки. */}
       <div className="grid gap-3 md:grid-cols-4">
         {COLUMNS.map(col => {
-          const list = items.filter(
+          const inColumn = items.filter(
             i => i.status === col.key && !i.archived_at);
+          // «Готово» — единственная колонка, которая обрезается: открытые
+          // задачи не должны прятаться, а закрытых со временем становится
+          // много. Сортируем по дате закрытия — «последние несколько»
+          // значит недавно завершённые, а не недавно созданные.
+          const capped = col.key === 'done';
+          const full = capped
+            ? [...inColumn].sort(
+                (a, b) => (b.closed_at ?? '').localeCompare(a.closed_at ?? ''))
+            : inColumn;
+          const list = capped ? full.slice(0, DONE_SHOWN) : full;
+          const hiddenDone = capped ? full.length - list.length : 0;
+
           return (
             <section key={col.key}>
               <h2 className="text-xs text-(--color-muted) mb-2 px-1">
-                {col.label} {list.length > 0 && list.length}
+                {col.label} {full.length > 0 && full.length}
               </h2>
               <div className="space-y-2">
                 {list.map(i => (
@@ -86,6 +119,14 @@ export function Board() {
                   />
                 ))}
               </div>
+              {capped && (hiddenDone > 0 || archivedCount > 0) && (
+                <button
+                  onClick={() => setShowArchive(true)}
+                  className="text-xs text-(--color-muted) mt-2 px-1"
+                >
+                  ещё {hiddenDone + archivedCount} · архив
+                </button>
+              )}
             </section>
           );
         })}
@@ -96,6 +137,14 @@ export function Board() {
           item={openItem}
           onClose={() => setOpenItem(null)}
           onChanged={() => { reload(current); setOpenItem(null); }}
+        />
+      )}
+
+      {showArchive && (
+        <ArchiveList
+          items={archiveItems}
+          onOpen={i => { setShowArchive(false); setOpenItem(i); }}
+          onClose={() => setShowArchive(false)}
         />
       )}
     </div>
