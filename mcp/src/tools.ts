@@ -98,7 +98,7 @@ export function registerTools(server: McpServer) {
     let pos = Date.now() % 1_000_000;
     for (const it of items) {
       const seq = await nextSeq(p.id, 'item');
-      rows.push({
+      const row = {
         id: `${p.prefix}-${seq}`,
         seq,
         project_id: p.id,
@@ -111,11 +111,13 @@ export function registerTools(server: McpServer) {
         blocks: it.blocks ?? [],
         position: (pos += 100),
         created_by: 'claude',
-      });
+      };
+      // Вставляем сразу, а не пачкой в конце: next_seq() видит состояние
+      // items ДО вставки, и пачка в конце дала бы всем строкам один seq.
+      const { error } = await sb.from('items').insert(row);
+      if (error) throw new Error(error.message);
+      rows.push(row);
     }
-
-    const { error } = await sb.from('items').insert(rows);
-    if (error) throw new Error(error.message);
 
     const ids = rows.map(r => r.id);
     return text(ids.length === 1
@@ -228,30 +230,35 @@ export function registerTools(server: McpServer) {
     for (const t of plan.tasks) {
       const seq = await nextSeq(p.id, 'item');
       const id = `${p.prefix}-${seq}`;
-      rows.push({
+      const taskRow = {
         id, seq, project_id: p.id, epic_id: epicId, type: 'task',
         title: t.title, body: t.body || null, status: 'backlog',
         checklist: t.checklist.map(s => ({ text: s, done: false })),
         blocks: [], position: (pos += 100), created_by: 'claude',
-      });
+      };
+      // Вставляем сразу же, как и в add(): next_seq() иначе не увидит
+      // строки, ещё не вставленные из этого же вызова.
+      const taskIns = await sb.from('items').insert(taskRow);
+      if (taskIns.error) throw new Error(taskIns.error.message);
+      rows.push(taskRow);
 
       // Ручной шаг вынимается из задачи и становится карточкой владельцу,
       // которая её же и блокирует.
       for (const m of t.manualSteps) {
         const mseq = await nextSeq(p.id, 'item');
-        rows.push({
+        const manualRow = {
           id: `${p.prefix}-${mseq}`, seq: mseq, project_id: p.id,
           epic_id: epicId, type: 'chore', title: m,
           body: `Ручной шаг из задачи «${t.title}».`,
           status: 'waiting', checklist: [], blocks: [id],
           position: (pos += 100), created_by: 'claude',
-        });
+        };
+        const manualIns = await sb.from('items').insert(manualRow);
+        if (manualIns.error) throw new Error(manualIns.error.message);
+        rows.push(manualRow);
         manual++;
       }
     }
-
-    const ins = await sb.from('items').insert(rows);
-    if (ins.error) throw new Error(ins.error.message);
 
     const steps: number = plan.tasks.reduce((n, t) => n + t.checklist.length, 0);
     return text(
