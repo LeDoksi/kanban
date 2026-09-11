@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { sb } from './supabase';
 import type { Item, Project } from './supabase';
 import { NewTask } from './NewTask';
@@ -227,17 +228,19 @@ function Column(
       <h2 className="text-xs text-(--color-muted) mb-2 px-1">
         {col.label} {full.length > 0 && full.length}
       </h2>
-      <div className="space-y-2">
-        {list.map(i => (
-          <Card
-            key={i.id}
-            item={i}
-            onChanged={onChanged}
-            onError={onError}
-            onOpen={onOpen}
-          />
-        ))}
-      </div>
+      <SortableContext items={list.map(i => i.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-2">
+          {list.map(i => (
+            <Card
+              key={i.id}
+              item={i}
+              onChanged={onChanged}
+              onError={onError}
+              onOpen={onOpen}
+            />
+          ))}
+        </div>
+      </SortableContext>
       {capped && (hiddenDone > 0 || archivedCount > 0) && (
         <button
           onClick={onShowArchive}
@@ -258,10 +261,14 @@ function Card(
 ) {
   const done = item.checklist.filter(s => s.done).length;
   const waiting = item.status === 'waiting';
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: item.id });
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
+  const { listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: item.id });
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition: transition ?? undefined,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
 
   const move = async (status: Item['status']) => {
     const { error } = await sb.from('items').update({
@@ -278,7 +285,6 @@ function Card(
       ref={setNodeRef}
       style={style}
       {...listeners}
-      {...attributes}
       onClick={() => onOpen(item)}
       className={`rounded-lg p-2.5 text-sm cursor-grab ${
         waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
