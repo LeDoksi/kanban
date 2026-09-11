@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { sb } from './supabase';
 import type { Item, Project } from './supabase';
 import { NewTask } from './NewTask';
@@ -7,6 +9,7 @@ import { NewEpic } from './NewEpic';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 import { EpicScreen } from './EpicScreen';
+import { between } from './position';
 
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog' },
@@ -71,6 +74,12 @@ export function Board() {
       (b.closed_at ?? b.archived_at ?? '')
         .localeCompare(a.closed_at ?? a.archived_at ?? ''));
 
+  // Хук вызывается безусловно, до любого раннего return — иначе порядок
+  // хуков между рендерами разъедет (например, при входе на экран эпика).
+  const sensors = useSensors(useSensor(PointerSensor, {
+    activationConstraint: { distance: 5 },
+  }));
+
   if (viewEpic) {
     return (
       <>
@@ -94,6 +103,36 @@ export function Board() {
       </>
     );
   }
+
+  const onDragEnd = async (e: DragEndEvent) => {
+    const itemId = e.active.id as string;
+    const overId = e.over?.id as string | undefined;
+    if (!overId) return;
+
+    // over.id — либо статус колонки (перетащили в пустое место), либо id
+    // карточки, над которой отпустили (тогда встаём перед ней).
+    const targetStatus = (COLUMNS.find(c => c.key === overId)?.key
+      ?? items.find(i => i.id === overId)?.status) as Item['status'] | undefined;
+    if (!targetStatus) return;
+
+    const columnItems = items
+      .filter(i => i.status === targetStatus && !i.archived_at && i.id !== itemId)
+      .sort((a, b) => a.position - b.position);
+    const overIndex = columnItems.findIndex(i => i.id === overId);
+    const before = overIndex > 0 ? columnItems[overIndex - 1].position : null;
+    const after = overIndex >= 0 ? columnItems[overIndex].position : null;
+    const position = between(before, after);
+
+    const dragged = items.find(i => i.id === itemId);
+    const patch: Record<string, unknown> = { position };
+    if (dragged && dragged.status !== targetStatus) {
+      patch.status = targetStatus;
+      patch.closed_at = targetStatus === 'done' ? new Date().toISOString() : null;
+    }
+    const { error } = await sb.from('items').update(patch).eq('id', itemId);
+    if (error) { setErr(error.message); return; }
+    reload(current);
+  };
 
   return (
     <div className="min-h-dvh p-4 md:p-6 max-w-6xl mx-auto">
@@ -125,50 +164,22 @@ export function Board() {
       </header>
 
       {/* Телефон — одна вертикаль, десктоп — четыре колонки. */}
-      <div className="grid gap-3 md:grid-cols-4">
-        {COLUMNS.map(col => {
-          const inColumn = items.filter(
-            i => i.status === col.key && !i.archived_at);
-          // «Готово» — единственная колонка, которая обрезается: открытые
-          // задачи не должны прятаться, а закрытых со временем становится
-          // много. Сортируем по дате закрытия — «последние несколько»
-          // значит недавно завершённые, а не недавно созданные.
-          const capped = col.key === 'done';
-          const full = capped
-            ? [...inColumn].sort(
-                (a, b) => (b.closed_at ?? '').localeCompare(a.closed_at ?? ''))
-            : inColumn;
-          const list = capped ? full.slice(0, DONE_SHOWN) : full;
-          const hiddenDone = capped ? full.length - list.length : 0;
-
-          return (
-            <section key={col.key}>
-              <h2 className="text-xs text-(--color-muted) mb-2 px-1">
-                {col.label} {full.length > 0 && full.length}
-              </h2>
-              <div className="space-y-2">
-                {list.map(i => (
-                  <Card
-                    key={i.id}
-                    item={i}
-                    onChanged={() => reload(current)}
-                    onError={setErr}
-                    onOpen={setOpenItem}
-                  />
-                ))}
-              </div>
-              {capped && (hiddenDone > 0 || archivedCount > 0) && (
-                <button
-                  onClick={() => setShowArchive(true)}
-                  className="text-xs text-(--color-muted) mt-2 px-1"
-                >
-                  ещё {hiddenDone + archivedCount} · архив
-                </button>
-              )}
-            </section>
-          );
-        })}
-      </div>
+      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+        <div className="grid gap-3 md:grid-cols-4">
+          {COLUMNS.map(col => (
+            <Column
+              key={col.key}
+              col={col}
+              items={items.filter(i => i.status === col.key && !i.archived_at)}
+              archivedCount={archivedCount}
+              onChanged={() => reload(current)}
+              onError={setErr}
+              onOpen={setOpenItem}
+              onShowArchive={() => setShowArchive(true)}
+            />
+          ))}
+        </div>
+      </DndContext>
 
       {openItem && (
         <TaskModal
@@ -190,6 +201,55 @@ export function Board() {
   );
 }
 
+function Column(
+  { col, items, archivedCount, onChanged, onError, onOpen, onShowArchive }: {
+    col: typeof COLUMNS[number]; items: Item[]; archivedCount: number;
+    onChanged: () => void; onError: (msg: string) => void;
+    onOpen: (item: Item) => void; onShowArchive: () => void;
+  },
+) {
+  const { setNodeRef } = useDroppable({ id: col.key });
+
+  // «Готово» — единственная колонка, которая обрезается: открытые задачи
+  // не должны прятаться, а закрытых со временем становится много.
+  // Сортируем по дате закрытия — «последние несколько» значит недавно
+  // завершённые, а не недавно созданные.
+  const capped = col.key === 'done';
+  const full = capped
+    ? [...items].sort(
+        (a, b) => (b.closed_at ?? '').localeCompare(a.closed_at ?? ''))
+    : items;
+  const list = capped ? full.slice(0, DONE_SHOWN) : full;
+  const hiddenDone = capped ? full.length - list.length : 0;
+
+  return (
+    <section ref={setNodeRef}>
+      <h2 className="text-xs text-(--color-muted) mb-2 px-1">
+        {col.label} {full.length > 0 && full.length}
+      </h2>
+      <div className="space-y-2">
+        {list.map(i => (
+          <Card
+            key={i.id}
+            item={i}
+            onChanged={onChanged}
+            onError={onError}
+            onOpen={onOpen}
+          />
+        ))}
+      </div>
+      {capped && (hiddenDone > 0 || archivedCount > 0) && (
+        <button
+          onClick={onShowArchive}
+          className="text-xs text-(--color-muted) mt-2 px-1"
+        >
+          ещё {hiddenDone + archivedCount} · архив
+        </button>
+      )}
+    </section>
+  );
+}
+
 function Card(
   { item, onChanged, onError, onOpen }: {
     item: Item; onChanged: () => void; onError: (msg: string) => void;
@@ -198,6 +258,10 @@ function Card(
 ) {
   const done = item.checklist.filter(s => s.done).length;
   const waiting = item.status === 'waiting';
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: item.id });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
 
   const move = async (status: Item['status']) => {
     const { error } = await sb.from('items').update({
@@ -211,8 +275,12 @@ function Card(
 
   return (
     <article
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
       onClick={() => onOpen(item)}
-      className={`rounded-lg p-2.5 text-sm cursor-pointer ${
+      className={`rounded-lg p-2.5 text-sm cursor-grab ${
         waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
       }`}
     >
