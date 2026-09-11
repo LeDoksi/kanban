@@ -10,6 +10,7 @@ import { NewEpic } from './NewEpic';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 import { EpicScreen } from './EpicScreen';
+import { AllProjects } from './AllProjects';
 import { between } from './position';
 
 const STATUS_ORDER: Item['status'][] = ['backlog', 'doing', 'waiting', 'done'];
@@ -31,6 +32,7 @@ export function Board() {
   const [openItem, setOpenItem] = useState<Item | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [viewEpic, setViewEpic] = useState<string | null>(null);
+  const [viewAll, setViewAll] = useState(false);
 
   // Архивные грузим тоже: из колонок они убраны, но в счётчике остаются —
   // иначе прогресс едет назад, когда готовые карточки уходят в архив.
@@ -102,6 +104,12 @@ export function Board() {
     activationConstraint: { distance: 5 },
   }));
 
+  if (viewAll) {
+    return (
+      <AllProjects onSelect={id => { setCurrent(id); setViewAll(false); }} />
+    );
+  }
+
   if (viewEpic) {
     return (
       <>
@@ -159,6 +167,12 @@ export function Board() {
   return (
     <div className="min-h-dvh p-4 md:p-6 max-w-6xl mx-auto">
       <header className="flex items-center gap-3 mb-5 flex-wrap">
+        <button
+          onClick={() => setViewAll(true)}
+          className="text-sm text-(--color-muted)"
+        >
+          Все проекты
+        </button>
         <select
           value={current}
           onChange={e => setCurrent(e.target.value)}
