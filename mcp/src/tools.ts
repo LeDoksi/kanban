@@ -1,11 +1,14 @@
 /* Шесть инструментов агента. Описания намеренно короткие: каждое слово
    здесь оплачивается в системном промпте каждого запроса. Ответы —
    одна строка подтверждения, а не эхо созданных объектов. */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { sb, resolveProject } from './db.ts';
 import type { Item, Epic, Comment } from './db.ts';
 import { formatBoard, formatItem } from './format.ts';
+import { parsePlan } from './parse-plan.ts';
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
 
@@ -191,5 +194,70 @@ export function registerTools(server: McpServer) {
       .insert({ item_id: id, author: 'claude', body });
     if (error) throw new Error(error.message);
     return text(`${id}: записано`);
+  });
+
+  server.registerTool('import_plan', {
+    description: 'Залить план superpowers на доску: эпик и все задачи',
+    inputSchema: {
+      path: z.string(),
+      project: z.string().optional(),
+    },
+  }, async ({ path, project }) => {
+    const p = await resolveProject(project);
+    const full = resolve(process.cwd(), path);
+    const plan = parsePlan(readFileSync(full, 'utf8'));
+
+    if (!plan.tasks.length) {
+      return text(`В ${path} не нашлось задач вида "### Task N: ...". Импорт отменён.`);
+    }
+
+    const eseq = await nextSeq(p.id, 'epic');
+    const epicId = `${p.prefix}-E${eseq}`;
+    const e = await sb.from('epics').insert({
+      id: epicId, seq: eseq, project_id: p.id,
+      title: plan.title, goal: plan.goal || null,
+      plan_path: path, spec_path: plan.specPath,
+      position: Date.now() % 1_000_000,
+    });
+    if (e.error) throw new Error(e.error.message);
+
+    const rows = [];
+    let pos = 1000;
+    let manual = 0;
+
+    for (const t of plan.tasks) {
+      const seq = await nextSeq(p.id, 'item');
+      const id = `${p.prefix}-${seq}`;
+      rows.push({
+        id, seq, project_id: p.id, epic_id: epicId, type: 'task',
+        title: t.title, body: t.body || null, status: 'backlog',
+        checklist: t.checklist.map(s => ({ text: s, done: false })),
+        blocks: [], position: (pos += 100), created_by: 'claude',
+      });
+
+      // Ручной шаг вынимается из задачи и становится карточкой владельцу,
+      // которая её же и блокирует.
+      for (const m of t.manualSteps) {
+        const mseq = await nextSeq(p.id, 'item');
+        rows.push({
+          id: `${p.prefix}-${mseq}`, seq: mseq, project_id: p.id,
+          epic_id: epicId, type: 'chore', title: m,
+          body: `Ручной шаг из задачи «${t.title}».`,
+          status: 'waiting', checklist: [], blocks: [id],
+          position: (pos += 100), created_by: 'claude',
+        });
+        manual++;
+      }
+    }
+
+    const ins = await sb.from('items').insert(rows);
+    if (ins.error) throw new Error(ins.error.message);
+
+    const steps: number = plan.tasks.reduce((n, t) => n + t.checklist.length, 0);
+    return text(
+      `${epicId} «${plan.title}»: ${plan.tasks.length} задач, ${steps} шагов` +
+      (manual ? `, ${manual} ждёт тебя` : '') +
+      `\nПроверь разбор глазами: get ${rows[0].id}`,
+    );
   });
 }
