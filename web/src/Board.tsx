@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, type DragEndEvent, MouseSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { sb } from './supabase';
@@ -11,6 +11,8 @@ import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 import { EpicScreen } from './EpicScreen';
 import { between } from './position';
+
+const STATUS_ORDER: Item['status'][] = ['backlog', 'doing', 'waiting', 'done'];
 
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog' },
@@ -77,7 +79,10 @@ export function Board() {
 
   // Хук вызывается безусловно, до любого раннего return — иначе порядок
   // хуков между рендерами разъедет (например, при входе на экран эпика).
-  const sensors = useSensors(useSensor(PointerSensor, {
+  // MouseSensor, не PointerSensor: PointerSensor объединяет мышь и
+  // касание, и захватывал бы свайп на телефоне как начало перетаскивания
+  // раньше, чем сработают собственные touch-обработчики карточки.
+  const sensors = useSensors(useSensor(MouseSensor, {
     activationConstraint: { distance: 5 },
   }));
 
@@ -270,6 +275,32 @@ function Card(
     zIndex: isDragging ? 10 : undefined,
   };
 
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [dragX, setDragX] = useState(0);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    setDragX(e.touches[0].clientX - touchStartX);
+  };
+  // ponytail: свайп проверяет только сдвиг по X мимо порога, без учёта
+  // скорости и без анимации возврата — если порог не пройден, dragX
+  // просто сбрасывается в 0, и карточка резко становится на место.
+  // Достаточно для «свайп меняет статус»; плавный отскок и инерция —
+  // если без них станет реально раздражать в использовании.
+  const onTouchEnd = () => {
+    const THRESHOLD = 60;
+    if (Math.abs(dragX) > THRESHOLD) {
+      const i = STATUS_ORDER.indexOf(item.status);
+      const next = dragX > 0 ? i + 1 : i - 1;
+      if (next >= 0 && next < STATUS_ORDER.length) move(STATUS_ORDER[next]);
+    }
+    setTouchStartX(null);
+    setDragX(0);
+  };
+
   const move = async (status: Item['status']) => {
     const { error } = await sb.from('items').update({
       status,
@@ -283,10 +314,16 @@ function Card(
   return (
     <article
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        transform: `${style.transform ?? ''} translateX(${dragX}px)`.trim(),
+      }}
       {...listeners}
       onClick={() => onOpen(item)}
-      className={`rounded-lg p-2.5 text-sm cursor-grab ${
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      className={`rounded-lg p-2.5 text-sm cursor-grab touch-pan-y ${
         waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
       }`}
     >
