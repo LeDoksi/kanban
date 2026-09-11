@@ -114,6 +114,10 @@ export function registerTools(server: McpServer) {
       };
       // Вставляем сразу, а не пачкой в конце: next_seq() видит состояние
       // items ДО вставки, и пачка в конце дала бы всем строкам один seq.
+      // ponytail: вставка построчная, не в транзакции — сбой на середине
+      // массива оставит более ранние строки уже записанными без явного
+      // сигнала об этом вызывающему. Обновить на атомарный RPC-батч,
+      // если частичные импорты когда-нибудь станут реальной проблемой.
       const { error } = await sb.from('items').insert(row);
       if (error) throw new Error(error.message);
       rows.push(row);
@@ -238,6 +242,9 @@ export function registerTools(server: McpServer) {
       };
       // Вставляем сразу же, как и в add(): next_seq() иначе не увидит
       // строки, ещё не вставленные из этого же вызова.
+      // ponytail: то же самое допущение об атомарности, что и в add() —
+      // сбой на середине плана оставит уже импортированные задачи на
+      // доске без отдельного сигнала об этом.
       const taskIns = await sb.from('items').insert(taskRow);
       if (taskIns.error) throw new Error(taskIns.error.message);
       rows.push(taskRow);
