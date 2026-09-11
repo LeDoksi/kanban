@@ -230,6 +230,10 @@ export function registerTools(server: McpServer) {
     // задачи целиком. План опознаётся по plan_path внутри проекта.
     const dup = await sb.from('epics').select('id')
       .eq('project_id', p.id).eq('plan_path', path).maybeSingle();
+    // Ошибку проверки (например, .maybeSingle() на двух совпавших строках,
+    // если дубликат уже случился раньше) трактуем как «лучше отказать
+    // в импорте», а не тихо пропускаем дальше и плодим ещё один дубль.
+    if (dup.error) throw new Error(dup.error.message);
     if (dup.data) {
       return text(`${dup.data.id} уже импортирован из ${path}. Импорт отменён.`);
     }
