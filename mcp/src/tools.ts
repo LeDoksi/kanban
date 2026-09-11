@@ -79,9 +79,17 @@ export function registerTools(server: McpServer) {
   });
 
   server.registerTool('add', {
-    description: 'Создать задачи. Принимает массив — весь план одним вызовом',
+    description: 'Создать задачи, при желании — новый эпик для них одним вызовом',
     inputSchema: {
       project: z.string().optional(),
+      // Строка — ссылка на существующий эпик. Объект — создать новый эпик
+      // и прикрепить к нему все задачи этого вызова, у которых нет своего
+      // items[].epic. Так «крупная тема без готового плана» заводится
+      // одним вызовом, без похода в import_plan.
+      epic: z.union([
+        z.string(),
+        z.object({ title: z.string(), goal: z.string().optional() }),
+      ]).optional(),
       items: z.array(z.object({
         title: z.string(),
         body: z.string().optional(),
@@ -92,8 +100,22 @@ export function registerTools(server: McpServer) {
         blocks: z.array(z.string()).optional(),
       })).min(1),
     },
-  }, async ({ project, items }) => {
+  }, async ({ project, epic, items }) => {
     const p = await resolveProject(project);
+
+    let defaultEpicId: string | undefined;
+    if (epic && typeof epic === 'object') {
+      const eseq = await nextSeq(p.id, 'epic');
+      defaultEpicId = `${p.prefix}-E${eseq}`;
+      const e = await sb.from('epics').insert({
+        id: defaultEpicId, seq: eseq, project_id: p.id,
+        title: epic.title, goal: epic.goal ?? null,
+        position: eseq * 100,
+      });
+      if (e.error) throw new Error(e.error.message);
+    } else if (typeof epic === 'string') {
+      defaultEpicId = epic;
+    }
 
     // Номера берутся по одному: next_seq держит блокировку строки проекта,
     // поэтому параллельные сессии не получат одинаковый номер.
@@ -104,7 +126,7 @@ export function registerTools(server: McpServer) {
         id: `${p.prefix}-${seq}`,
         seq,
         project_id: p.id,
-        epic_id: it.epic ?? null,
+        epic_id: it.epic ?? defaultEpicId ?? null,
         type: it.type,
         title: it.title,
         body: it.body ?? null,
