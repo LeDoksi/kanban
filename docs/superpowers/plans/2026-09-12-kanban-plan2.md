@@ -1474,10 +1474,62 @@ export function TaskModal(
         )}
 ```
 
-В `web/src/Board.tsx` передать проп в оба места, где рендерится `TaskModal` (основной вид и вид эпика из Step 2):
+В `web/src/Board.tsx` передать проп в оба места, где рендерится `TaskModal`. Основной вид (добавлено в Task 4) — найти:
 
 ```tsx
+      {openItem && (
+        <TaskModal
+          item={openItem}
+          onClose={() => setOpenItem(null)}
+          onChanged={() => { reload(current); setOpenItem(null); }}
+        />
+      )}
+```
+
+Заменить на:
+
+```tsx
+      {openItem && (
+        <TaskModal
+          item={openItem}
+          onClose={() => setOpenItem(null)}
+          onChanged={() => { reload(current); setOpenItem(null); }}
           onOpenEpic={id => { setOpenItem(null); setViewEpic(id); }}
+        />
+      )}
+```
+
+Вид эпика (добавлено в Step 2 этой задачи) — найти:
+
+```tsx
+        {openItem && (
+          <TaskModal
+            item={openItem}
+            onClose={() => setOpenItem(null)}
+            // ponytail: список экрана эпика не перечитывается на месте
+            // после правки через модалку — только при повторном заходе
+            // на экран. Обновить, если статус внутри эпика станет менять
+            // хотя бы каждый второй заход.
+            onChanged={() => setOpenItem(null)}
+          />
+        )}
+```
+
+Заменить на:
+
+```tsx
+        {openItem && (
+          <TaskModal
+            item={openItem}
+            onClose={() => setOpenItem(null)}
+            // ponytail: список экрана эпика не перечитывается на месте
+            // после правки через модалку — только при повторном заходе
+            // на экран. Обновить, если статус внутри эпика станет менять
+            // хотя бы каждый второй заход.
+            onChanged={() => setOpenItem(null)}
+            onOpenEpic={id => { setOpenItem(null); setViewEpic(id); }}
+          />
+        )}
 ```
 
 - [ ] **Step 4: Проверить сборку**
