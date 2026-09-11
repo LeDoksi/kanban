@@ -58,7 +58,23 @@ export function Board() {
 
   const currentProject = projects.find(p => p.id === current) ?? null;
 
-  useEffect(() => { reload(current); }, [current]);
+  useEffect(() => {
+    reload(current);
+    if (!current) return;
+
+    // Пока агент пишет через MCP, доска обновляется сама — без кнопки
+    // «обновить» и без опроса по таймеру.
+    const channel = sb
+      .channel(`items-${current}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items', filter: `project_id=eq.${current}` },
+        () => reload(current),
+      )
+      .subscribe();
+
+    return () => { sb.removeChannel(channel); };
+  }, [current]);
 
   // То же множество «показанных в Готово», что и в рендере колонок —
   // архив показывает всё остальное: и настоящие архивные карточки, и
