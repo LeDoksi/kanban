@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { sb } from './supabase';
 import type { Item, Project } from './supabase';
 import { NewTask } from './NewTask';
+import { NewProject } from './NewProject';
+import { NewEpic } from './NewEpic';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 
@@ -34,16 +36,19 @@ export function Board() {
     setItems((data ?? []) as Item[]);
   };
 
-  useEffect(() => {
-    sb.from('projects').select('*').is('archived_at', null)
-      .order('position')
-      .then(({ data, error }) => {
-        if (error) { setErr(error.message); return; }
-        const ps = (data ?? []) as Project[];
-        setProjects(ps);
-        if (ps.length) setCurrent(ps[0].id);
-      });
-  }, []);
+  const reloadProjects = async (keepCurrent = true) => {
+    const { data, error } = await sb.from('projects').select('*')
+      .is('archived_at', null).order('position');
+    if (error) { setErr(error.message); return; }
+    const ps = (data ?? []) as Project[];
+    setProjects(ps);
+    if (!keepCurrent && ps.length) setCurrent(ps[0].id);
+    if (keepCurrent && !current && ps.length) setCurrent(ps[0].id);
+  };
+
+  useEffect(() => { reloadProjects(false); }, []);
+
+  const currentProject = projects.find(p => p.id === current) ?? null;
 
   useEffect(() => { reload(current); }, [current]);
 
@@ -66,7 +71,7 @@ export function Board() {
 
   return (
     <div className="min-h-dvh p-4 md:p-6 max-w-6xl mx-auto">
-      <header className="flex items-center gap-3 mb-5">
+      <header className="flex items-center gap-3 mb-5 flex-wrap">
         <select
           value={current}
           onChange={e => setCurrent(e.target.value)}
@@ -77,11 +82,18 @@ export function Board() {
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
+        {currentProject?.description && (
+          <span className="text-sm text-(--color-muted)">
+            {currentProject.description}
+          </span>
+        )}
         {err && <span className="text-sm text-(--color-danger-ink)">{err}</span>}
         <span className="text-sm text-(--color-muted)">
           {items.filter(i => i.status === 'done').length}/{items.length}
         </span>
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
+          <NewProject onCreated={id => { reloadProjects(); setCurrent(id); }} />
+          <NewEpic project={current} onCreated={() => reload(current)} />
           <NewTask project={current} onAdded={() => reload(current)} />
         </div>
       </header>
