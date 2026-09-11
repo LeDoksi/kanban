@@ -106,3 +106,8 @@ create policy owner_only on items for all
 create policy owner_only on comments for all
   using (auth.jwt() ->> 'email' = 'shakov.georgy@gmail.com')
   with check (auth.jwt() ->> 'email' = 'shakov.georgy@gmail.com');
+
+-- Первый проект заводится руками через Supabase SQL editor или MCP
+-- execute_sql — repo_path — то, по чему MCP-сервер узнаёт проект по cwd.
+-- insert into projects (id, name, prefix, repo_path) values
+--   ('kanban', 'Канбан', 'KAN', 'C:/путь/до/репозитория');

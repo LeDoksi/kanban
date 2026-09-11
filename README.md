@@ -14,6 +14,12 @@ Claude Code ведёт их через MCP.
 - `docs/superpowers/specs/` — спека
 - `docs/superpowers/plans/` — планы
 
+## Первый запуск
+
+Пустая база не заводит проекты сама — вставь первую строку в `projects`
+через Supabase SQL editor (пример — в конце
+`supabase/migrations/20260911000000_schema.sql`).
+
 ## Запуск
 
 ```bash
