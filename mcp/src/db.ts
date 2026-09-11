@@ -59,7 +59,11 @@ export async function resolveProject(explicit?: string): Promise<Project> {
 
   const cwd = norm(process.cwd());
   const matches = projects
-    .filter(p => p.repo_path && cwd.startsWith(norm(p.repo_path)))
+    .filter(p => {
+      if (!p.repo_path) return false;
+      const base = norm(p.repo_path);
+      return cwd === base || cwd.startsWith(base + '/');
+    })
     .sort((a, b) => norm(b.repo_path!).length - norm(a.repo_path!).length);
 
   if (matches.length) return matches[0];
