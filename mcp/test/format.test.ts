@@ -19,6 +19,33 @@ test('шапка показывает проект, эпик и прогресс
   assert.equal(out.split('\n')[0], 'family-app · E1 Firestore (7/15)');
 });
 
+test('шапка показывает описание проекта, если оно задано', () => {
+  const out = formatBoard([], {
+    project: 'family-app',
+    description: 'трекер свиданий пары',
+    done: 0, total: 0,
+  });
+  assert.equal(out.split('\n')[0], 'family-app — трекер свиданий пары (0/0)');
+});
+
+test('шапка с описанием и эпиком одновременно', () => {
+  const out = formatBoard([], {
+    project: 'family-app',
+    description: 'трекер свиданий пары',
+    epic: { id: 'FAM-E1', title: 'Firestore' },
+    done: 7, total: 15,
+  });
+  assert.equal(
+    out.split('\n')[0],
+    'family-app — трекер свиданий пары · E1 Firestore (7/15)',
+  );
+});
+
+test('без описания шапка как раньше, без лишнего тире', () => {
+  const out = formatBoard([], { project: 'kanban', done: 0, total: 0 });
+  assert.equal(out.split('\n')[0], 'kanban (0/0)');
+});
+
 test('префикс проекта в строках не печатается', () => {
   const out = formatBoard(
     [item({ id: 'KAN-8', seq: 8, title: 'Заметки', status: 'doing' })],

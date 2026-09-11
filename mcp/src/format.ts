@@ -5,6 +5,7 @@ import type { Item, Comment, Epic } from './db.ts';
 
 export type BoardHead = {
   project: string;
+  description?: string | null;
   epic?: { id: string; title: string } | null;
   done: number;
   total: number;
@@ -22,7 +23,10 @@ export function formatBoard(items: Item[], head: BoardHead): string {
   const epic = head.epic
     ? ` · ${head.epic.id.split('-').pop()} ${head.epic.title}`
     : '';
-  const lines = [`${head.project}${epic} (${head.done}/${head.total})`];
+  // Описание — одной строкой с проектом, не отдельной строкой:
+  // компактность важнее структуры для формата, который читает агент.
+  const desc = head.description ? ` — ${head.description}` : '';
+  const lines = [`${head.project}${desc}${epic} (${head.done}/${head.total})`];
 
   const open = items.filter(i => i.status !== 'done' && !i.archived_at);
   if (!open.length) {

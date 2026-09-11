@@ -14,7 +14,8 @@ export const sb = createClient(url, key, {
 });
 
 export type Project = {
-  id: string; name: string; prefix: string; repo_path: string | null;
+  id: string; name: string; prefix: string; description: string | null;
+  repo_path: string | null;
 };
 
 export type Epic = {

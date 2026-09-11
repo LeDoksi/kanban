@@ -51,6 +51,7 @@ export function registerTools(server: McpServer) {
 
     return text(formatBoard(items, {
       project: p.id,
+      description: p.description,
       epic: head ? { id: head.id, title: head.title } : null,
       done: items.filter(i => i.status === 'done').length,
       total: items.length,
@@ -293,5 +294,41 @@ export function registerTools(server: McpServer) {
       (manual ? `, ${manual} ждёт тебя` : '') +
       `\nПроверь разбор глазами: get ${rows[0].id}`,
     );
+  });
+
+  server.registerTool('project', {
+    description: 'Создать проект или обновить его имя/префикс/описание',
+    inputSchema: {
+      id: z.string(),
+      name: z.string().optional(),
+      prefix: z.string().optional(),
+      description: z.string().optional(),
+    },
+  }, async ({ id, name, prefix, description }) => {
+    const existing = await sb.from('projects').select('id').eq('id', id).maybeSingle();
+    if (existing.error) throw new Error(existing.error.message);
+
+    if (existing.data) {
+      const patch: Record<string, unknown> = {};
+      if (name !== undefined) patch.name = name;
+      if (prefix !== undefined) patch.prefix = prefix;
+      if (description !== undefined) patch.description = description;
+      if (!Object.keys(patch).length) return text(`${id}: нечего менять`);
+      const up = await sb.from('projects').update(patch).eq('id', id);
+      if (up.error) throw new Error(up.error.message);
+      return text(`${id} обновлён`);
+    }
+
+    if (!name || !prefix) {
+      throw new Error(`Проект "${id}" не найден. Для создания нужны name и prefix.`);
+    }
+    // repo_path — текущая папка: агент создаёт проект, уже работая в ней,
+    // так что автоопределение по cwd сразу заработает при следующем вызове.
+    const ins = await sb.from('projects').insert({
+      id, name, prefix, description: description ?? null,
+      repo_path: process.cwd(),
+    });
+    if (ins.error) throw new Error(ins.error.message);
+    return text(`${id} создан`);
   });
 }
