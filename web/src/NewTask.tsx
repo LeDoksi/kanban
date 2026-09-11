@@ -40,7 +40,9 @@ export function NewTask(
       title: clean,
       status: 'backlog',
       created_by: 'me',
-      position: Date.now() % 1_000_000,
+      // Тот же порядок, что у MCP-сервера: seq монотонен внутри проекта,
+      // шаг 100 оставляет место для вставки между соседями.
+      position: seqData * 100,
     });
     setBusy(false);
     if (error) { setError(error.message); return; }

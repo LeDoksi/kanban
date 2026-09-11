@@ -14,19 +14,25 @@ export function Board() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [current, setCurrent] = useState<string>('');
   const [items, setItems] = useState<Item[]>([]);
+  const [err, setErr] = useState('');
 
+  // Архивные грузим тоже: из колонок они убраны, но в счётчике остаются —
+  // иначе прогресс едет назад, когда готовые карточки уходят в архив.
   const reload = async (project: string) => {
     if (!project) return;
-    const { data } = await sb.from('items').select('*')
-      .eq('project_id', project).is('archived_at', null)
+    const { data, error } = await sb.from('items').select('*')
+      .eq('project_id', project)
       .order('position');
+    if (error) { setErr(error.message); return; }
+    setErr('');
     setItems((data ?? []) as Item[]);
   };
 
   useEffect(() => {
     sb.from('projects').select('*').is('archived_at', null)
       .order('position')
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { setErr(error.message); return; }
         const ps = (data ?? []) as Project[];
         setProjects(ps);
         if (ps.length) setCurrent(ps[0].id);
@@ -48,6 +54,7 @@ export function Board() {
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
+        {err && <span className="text-sm text-(--color-danger-ink)">{err}</span>}
         <span className="text-sm text-(--color-muted)">
           {items.filter(i => i.status === 'done').length}/{items.length}
         </span>
@@ -59,7 +66,8 @@ export function Board() {
       {/* Телефон — одна вертикаль, десктоп — четыре колонки. */}
       <div className="grid gap-3 md:grid-cols-4">
         {COLUMNS.map(col => {
-          const list = items.filter(i => i.status === col.key);
+          const list = items.filter(
+            i => i.status === col.key && !i.archived_at);
           return (
             <section key={col.key}>
               <h2 className="text-xs text-(--color-muted) mb-2 px-1">
@@ -67,7 +75,12 @@ export function Board() {
               </h2>
               <div className="space-y-2">
                 {list.map(i => (
-                  <Card key={i.id} item={i} onChanged={() => reload(current)} />
+                  <Card
+                    key={i.id}
+                    item={i}
+                    onChanged={() => reload(current)}
+                    onError={setErr}
+                  />
                 ))}
               </div>
             </section>
@@ -78,15 +91,21 @@ export function Board() {
   );
 }
 
-function Card({ item, onChanged }: { item: Item; onChanged: () => void }) {
+function Card(
+  { item, onChanged, onError }: {
+    item: Item; onChanged: () => void; onError: (msg: string) => void;
+  },
+) {
   const done = item.checklist.filter(s => s.done).length;
   const waiting = item.status === 'waiting';
 
   const move = async (status: Item['status']) => {
-    await sb.from('items').update({
+    const { error } = await sb.from('items').update({
       status,
       closed_at: status === 'done' ? new Date().toISOString() : null,
     }).eq('id', item.id);
+    // Молчаливый отказ выглядел бы как «карточка сама вернулась назад».
+    if (error) { onError(error.message); return; }
     onChanged();
   };
 
