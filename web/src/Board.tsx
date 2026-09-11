@@ -102,7 +102,7 @@ function Card({ item, onChanged }: { item: Item; onChanged: () => void }) {
         </span>
         {item.type !== 'task' && (
           <span className="text-[10px] px-1.5 py-px rounded
-                           bg-red-100 text-red-800">
+                           bg-(--color-danger) text-(--color-danger-ink)">
             {item.type === 'bug' ? 'баг' : 'долг'}
           </span>
         )}
