@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { sb } from './supabase';
 import type { Item, Project } from './supabase';
 import { NewTask } from './NewTask';
+import { TaskModal } from './TaskModal';
 
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog' },
@@ -15,6 +16,7 @@ export function Board() {
   const [current, setCurrent] = useState<string>('');
   const [items, setItems] = useState<Item[]>([]);
   const [err, setErr] = useState('');
+  const [openItem, setOpenItem] = useState<Item | null>(null);
 
   // Архивные грузим тоже: из колонок они убраны, но в счётчике остаются —
   // иначе прогресс едет назад, когда готовые карточки уходят в архив.
@@ -80,6 +82,7 @@ export function Board() {
                     item={i}
                     onChanged={() => reload(current)}
                     onError={setErr}
+                    onOpen={setOpenItem}
                   />
                 ))}
               </div>
@@ -87,13 +90,22 @@ export function Board() {
           );
         })}
       </div>
+
+      {openItem && (
+        <TaskModal
+          item={openItem}
+          onClose={() => setOpenItem(null)}
+          onChanged={() => { reload(current); setOpenItem(null); }}
+        />
+      )}
     </div>
   );
 }
 
 function Card(
-  { item, onChanged, onError }: {
+  { item, onChanged, onError, onOpen }: {
     item: Item; onChanged: () => void; onError: (msg: string) => void;
+    onOpen: (item: Item) => void;
   },
 ) {
   const done = item.checklist.filter(s => s.done).length;
@@ -111,7 +123,8 @@ function Card(
 
   return (
     <article
-      className={`rounded-lg p-2.5 text-sm ${
+      onClick={() => onOpen(item)}
+      className={`rounded-lg p-2.5 text-sm cursor-pointer ${
         waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
       }`}
     >
@@ -142,6 +155,7 @@ function Card(
       <select
         value={item.status}
         onChange={e => move(e.target.value as Item['status'])}
+        onClick={e => e.stopPropagation()}
         aria-label={`Статус задачи ${item.title}`}
         className="mt-2 w-full h-7 px-1 rounded text-[11px]
                    bg-transparent border border-(--color-line)
