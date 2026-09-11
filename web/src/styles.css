@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/* Тёмная тема обязательна: доска открывается и ночью с телефона.
+   Цвет несёт смысл и только его — янтарный «ждёт тебя», красный «баг»,
+   зелёный «закрыто». Всё остальное серое. */
+@theme {
+  --color-ground: #ffffff;
+  --color-panel: #f6f6f4;
+  --color-ink: #1a1a18;
+  --color-muted: #6b6b66;
+  --color-line: #e4e4e0;
+  --color-wait: #faeeda;
+  --color-wait-ink: #854f0b;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-ground: #17171a;
+    --color-panel: #1f1f23;
+    --color-ink: #ececea;
+    --color-muted: #9a9a94;
+    --color-line: #2c2c31;
+    --color-wait: #3a2c12;
+    --color-wait-ink: #f0c078;
+  }
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
