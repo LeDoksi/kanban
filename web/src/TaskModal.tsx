@@ -8,8 +8,9 @@ const STATUS_LABEL: Record<Item['status'], string> = {
 };
 
 export function TaskModal(
-  { item, onClose, onChanged }: {
+  { item, onClose, onChanged, onOpenEpic }: {
     item: Item; onClose: () => void; onChanged: () => void;
+    onOpenEpic?: (epicId: string) => void;
   },
 ) {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -87,6 +88,15 @@ export function TaskModal(
             <option key={s} value={s}>{STATUS_LABEL[s]}</option>
           ))}
         </select>
+
+        {item.epic_id && onOpenEpic && (
+          <button
+            onClick={() => onOpenEpic(item.epic_id!)}
+            className="text-xs text-(--color-muted) underline block mb-3"
+          >
+            эпик: {item.epic_id}
+          </button>
+        )}
 
         {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
 

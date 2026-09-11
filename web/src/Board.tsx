@@ -6,6 +6,7 @@ import { NewProject } from './NewProject';
 import { NewEpic } from './NewEpic';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
+import { EpicScreen } from './EpicScreen';
 
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog' },
@@ -23,6 +24,7 @@ export function Board() {
   const [err, setErr] = useState('');
   const [openItem, setOpenItem] = useState<Item | null>(null);
   const [showArchive, setShowArchive] = useState(false);
+  const [viewEpic, setViewEpic] = useState<string | null>(null);
 
   // Архивные грузим тоже: из колонок они убраны, но в счётчике остаются —
   // иначе прогресс едет назад, когда готовые карточки уходят в архив.
@@ -68,6 +70,30 @@ export function Board() {
     .sort((a, b) =>
       (b.closed_at ?? b.archived_at ?? '')
         .localeCompare(a.closed_at ?? a.archived_at ?? ''));
+
+  if (viewEpic) {
+    return (
+      <>
+        <EpicScreen
+          epicId={viewEpic}
+          onBack={() => setViewEpic(null)}
+          onOpenItem={setOpenItem}
+        />
+        {openItem && (
+          <TaskModal
+            item={openItem}
+            onClose={() => setOpenItem(null)}
+            // ponytail: список экрана эпика не перечитывается на месте
+            // после правки через модалку — только при повторном заходе
+            // на экран. Обновить, если статус внутри эпика станет менять
+            // хотя бы каждый второй заход.
+            onChanged={() => setOpenItem(null)}
+            onOpenEpic={id => { setOpenItem(null); setViewEpic(id); }}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="min-h-dvh p-4 md:p-6 max-w-6xl mx-auto">
@@ -149,6 +175,7 @@ export function Board() {
           item={openItem}
           onClose={() => setOpenItem(null)}
           onChanged={() => { reload(current); setOpenItem(null); }}
+          onOpenEpic={id => { setOpenItem(null); setViewEpic(id); }}
         />
       )}
 
