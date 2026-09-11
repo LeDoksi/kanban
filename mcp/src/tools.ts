@@ -152,7 +152,8 @@ export function registerTools(server: McpServer) {
 
     // Шаг чеклиста указывается номером (с единицы) или куском текста.
     const mark = (needle: number | string, done: boolean) => {
-      const list = item.checklist.map(s => ({ ...s }));
+      const list = ((patch.checklist as typeof item.checklist) ?? item.checklist)
+        .map(s => ({ ...s }));
       const i = typeof needle === 'number'
         ? needle - 1
         : list.findIndex(s => s.text.toLowerCase().includes(
