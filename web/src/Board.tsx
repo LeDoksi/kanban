@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sb } from './supabase';
 import type { Item, Project } from './supabase';
+import { NewTask } from './NewTask';
 
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog' },
@@ -50,6 +51,9 @@ export function Board() {
         <span className="text-sm text-(--color-muted)">
           {items.filter(i => i.status === 'done').length}/{items.length}
         </span>
+        <div className="ml-auto">
+          <NewTask project={current} onAdded={() => reload(current)} />
+        </div>
       </header>
 
       {/* Телефон — одна вертикаль, десктоп — четыре колонки. */}
