@@ -34,7 +34,11 @@ export function TaskModal(
   }, [onClose]);
 
   const toggleCheck = async (i: number) => {
-    const list = item.checklist.map((s, idx) =>
+    const { data, error: readErr } = await sb.from('items')
+      .select('checklist').eq('id', item.id).single();
+    if (readErr) { setErr(readErr.message); return; }
+    const current = (data?.checklist ?? item.checklist) as typeof item.checklist;
+    const list = current.map((s, idx) =>
       idx === i ? { ...s, done: !s.done } : s);
     const { error } = await sb.from('items')
       .update({ checklist: list }).eq('id', item.id);
@@ -102,6 +106,12 @@ export function TaskModal(
 
         {item.body && (
           <p className="text-sm whitespace-pre-wrap mb-4">{item.body}</p>
+        )}
+
+        {item.blocks.length > 0 && (
+          <p className="text-xs text-(--color-muted) mb-3">
+            заблокировано: {item.blocks.join(', ')}
+          </p>
         )}
 
         {item.checklist.length > 0 && (

@@ -139,23 +139,46 @@ export function Board() {
     const overId = e.over?.id as string | undefined;
     if (!overId) return;
 
-    // over.id — либо статус колонки (перетащили в пустое место), либо id
-    // карточки, над которой отпустили (тогда встаём перед ней).
     const targetStatus = (COLUMNS.find(c => c.key === overId)?.key
       ?? items.find(i => i.id === overId)?.status) as Item['status'] | undefined;
     if (!targetStatus) return;
 
+    const dragged = items.find(i => i.id === itemId);
+    if (!dragged) return;
+
     const columnItems = items
       .filter(i => i.status === targetStatus && !i.archived_at && i.id !== itemId)
       .sort((a, b) => a.position - b.position);
-    const overIndex = columnItems.findIndex(i => i.id === overId);
-    const before = overIndex > 0 ? columnItems[overIndex - 1].position : null;
-    const after = overIndex >= 0 ? columnItems[overIndex].position : null;
+
+    const droppedOnColumn = COLUMNS.some(c => c.key === overId);
+    let before: number | null;
+    let after: number | null;
+
+    if (droppedOnColumn) {
+      // Отпустили на пустом месте колонки — в конец списка.
+      const last = columnItems[columnItems.length - 1];
+      before = last ? last.position : null;
+      after = null;
+    } else {
+      const overIndex = columnItems.findIndex(i => i.id === overId);
+      if (overIndex === -1) return;
+      const overItem = columnItems[overIndex];
+      // В той же колонке направление сдвига решает, до карточки или после:
+      // тащим вниз (была раньше по position) — после overItem, вверх — до.
+      const sameColumn = dragged.status === targetStatus;
+      const movingDown = sameColumn && dragged.position < overItem.position;
+      if (movingDown) {
+        before = overItem.position;
+        after = columnItems[overIndex + 1]?.position ?? null;
+      } else {
+        before = columnItems[overIndex - 1]?.position ?? null;
+        after = overItem.position;
+      }
+    }
     const position = between(before, after);
 
-    const dragged = items.find(i => i.id === itemId);
     const patch: Record<string, unknown> = { position };
-    if (dragged && dragged.status !== targetStatus) {
+    if (dragged.status !== targetStatus) {
       patch.status = targetStatus;
       patch.closed_at = targetStatus === 'done' ? new Date().toISOString() : null;
     }
@@ -194,7 +217,7 @@ export function Board() {
         </span>
         <div className="ml-auto flex gap-2">
           <NewProject onCreated={id => { reloadProjects(); setCurrent(id); }} />
-          <NewEpic project={current} onCreated={() => reload(current)} />
+          <NewEpic project={current} onCreated={id => { reload(current); setViewEpic(id); }} />
           <NewTask project={current} onAdded={() => reload(current)} />
         </div>
       </header>
@@ -221,7 +244,7 @@ export function Board() {
         <TaskModal
           item={openItem}
           onClose={() => setOpenItem(null)}
-          onChanged={() => { reload(current); setOpenItem(null); }}
+          onChanged={() => reload(current)}
           onOpenEpic={id => { setOpenItem(null); setViewEpic(id); }}
         />
       )}
@@ -344,6 +367,11 @@ function Card(
   return (
     <article
       ref={setNodeRef}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); }
+      }}
       style={{
         ...style,
         transform: `${style.transform ?? ''} translateX(${dragX}px)`.trim(),

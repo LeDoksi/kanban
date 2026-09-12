@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { sb } from './supabase';
 
 export function NewEpic(
-  { project, onCreated }: { project: string; onCreated: () => void },
+  { project, onCreated }: { project: string; onCreated: (epicId: string) => void },
 ) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -19,11 +19,13 @@ export function NewEpic(
       .rpc('next_seq', { p_project: project, p_kind: 'epic' });
     if (seqErr) { setError(seqErr.message); setBusy(false); return; }
 
-    const { data: p } = await sb.from('projects')
+    const { data: p, error: pErr } = await sb.from('projects')
       .select('prefix').eq('id', project).single();
+    if (pErr || !p) { setError(pErr?.message ?? 'Проект не найден'); setBusy(false); return; }
 
+    const id = `${p.prefix}-E${seq}`;
     const { error } = await sb.from('epics').insert({
-      id: `${p!.prefix}-E${seq}`,
+      id,
       seq,
       project_id: project,
       title: title.trim(),
@@ -34,7 +36,7 @@ export function NewEpic(
     if (error) { setError(error.message); return; }
 
     setTitle(''); setGoal(''); setOpen(false);
-    onCreated();
+    onCreated(id);
   };
 
   if (!open) {

@@ -8,7 +8,7 @@ Claude Code ведёт их через MCP.
 ## Что где
 
 - `supabase/migrations/` — схема базы, индексы, RLS
-- `mcp/` — MCP-сервер: шесть инструментов для агента
+- `mcp/` — MCP-сервер: семь инструментов для агента
 - `web/` — веб-клиент на Vite, деплоится на GitHub Pages через
   `.github/workflows/deploy.yml`
 - `docs/superpowers/specs/` — спека
@@ -25,7 +25,7 @@ Claude Code ведёт их через MCP.
 ```bash
 cd web && npm run dev     # сайт на localhost:5173
 cd mcp && npm test        # тесты парсера планов и форматов вывода
-cd web && npm test        # тест угадывания типа задачи
+cd web && npm test        # тесты угадывания типа задачи и дробной позиции
 ```
 
 MCP-сервер запускается Claude Code сам, вручную его поднимать не нужно.

@@ -3,7 +3,7 @@
   "name": "kanban",
   "display_name": "Канбан",
   "version": "1.0.0",
-  "description": "Личная доска задач по проектам — шесть-семь инструментов для ведения канбана из Claude Code.",
+  "description": "Личная доска задач по проектам — семь инструментов для ведения канбана из Claude Code.",
   "author": { "name": "Georgy Shakov" },
   "server": {
     "type": "node",
