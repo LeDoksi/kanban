@@ -110,7 +110,7 @@ export function TaskModal(
 
         {item.blocks.length > 0 && (
           <p className="text-xs text-(--color-muted) mb-3">
-            заблокировано: {item.blocks.join(', ')}
+            блокирует: {item.blocks.join(', ')}
           </p>
         )}
 

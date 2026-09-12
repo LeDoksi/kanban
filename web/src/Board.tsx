@@ -43,7 +43,9 @@ export function Board() {
       .order('position');
     if (error) { setErr(error.message); return; }
     setErr('');
-    setItems((data ?? []) as Item[]);
+    const list = (data ?? []) as Item[];
+    setItems(list);
+    setOpenItem(prev => prev ? (list.find(i => i.id === prev.id) ?? prev) : null);
   };
 
   const reloadProjects = async (keepCurrent = true) => {
@@ -370,6 +372,7 @@ function Card(
       role="button"
       tabIndex={0}
       onKeyDown={e => {
+        if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); }
       }}
       style={{
