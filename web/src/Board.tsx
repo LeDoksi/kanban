@@ -4,14 +4,14 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { sb } from './supabase';
 import type { Item, Project } from './supabase';
-import { NewTask } from './NewTask';
 import { NewProject } from './NewProject';
-import { NewEpic } from './NewEpic';
+import { CreateModal } from './CreateModal';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 import { EpicScreen } from './EpicScreen';
 import { AllProjects } from './AllProjects';
 import { between } from './position';
+import type { Epic } from './supabase';
 
 const STATUS_ORDER: Item['status'][] = ['backlog', 'doing', 'waiting', 'done'];
 
@@ -28,9 +28,11 @@ export function Board() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [current, setCurrent] = useState<string>('');
   const [items, setItems] = useState<Item[]>([]);
+  const [epics, setEpics] = useState<Epic[]>([]);
   const [err, setErr] = useState('');
   const [openItem, setOpenItem] = useState<Item | null>(null);
   const [showArchive, setShowArchive] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const [viewEpic, setViewEpic] = useState<string | null>(null);
   const [viewAll, setViewAll] = useState(false);
 
@@ -46,6 +48,14 @@ export function Board() {
     const list = (data ?? []) as Item[];
     setItems(list);
     setOpenItem(prev => prev ? (list.find(i => i.id === prev.id) ?? prev) : null);
+  };
+
+  const reloadEpics = async (project: string) => {
+    if (!project) return;
+    const { data, error } = await sb.from('epics').select('*')
+      .eq('project_id', project).order('position');
+    if (error) { setErr(error.message); return; }
+    setEpics((data ?? []) as Epic[]);
   };
 
   const reloadProjects = async (keepCurrent = true) => {
@@ -64,16 +74,24 @@ export function Board() {
 
   useEffect(() => {
     reload(current);
+    reloadEpics(current);
     if (!current) return;
 
     // Пока агент пишет через MCP, доска обновляется сама — без кнопки
-    // «обновить» и без опроса по таймеру.
+    // «обновить» и без опроса по таймеру. epics тоже в publication
+    // (план №2, Task 10) — эпик, созданный или переименованный агентом,
+    // тоже появляется без перезагрузки.
     const channel = sb
       .channel(`items-${current}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'items', filter: `project_id=eq.${current}` },
         () => reload(current),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'epics', filter: `project_id=eq.${current}` },
+        () => reloadEpics(current),
       )
       .subscribe();
 
@@ -219,8 +237,13 @@ export function Board() {
         </span>
         <div className="ml-auto flex gap-2">
           <NewProject onCreated={id => { reloadProjects(); setCurrent(id); }} />
-          <NewEpic project={current} onCreated={id => { reload(current); setViewEpic(id); }} />
-          <NewTask project={current} onAdded={() => reload(current)} />
+          <button
+            onClick={() => setShowCreate(true)}
+            className="h-8 px-3 rounded-lg bg-(--color-ink)
+                       text-(--color-ground) text-sm"
+          >
+            Новая задача
+          </button>
         </div>
       </header>
 
@@ -256,6 +279,16 @@ export function Board() {
           items={archiveItems}
           onOpen={i => { setShowArchive(false); setOpenItem(i); }}
           onClose={() => setShowArchive(false)}
+        />
+      )}
+
+      {showCreate && (
+        <CreateModal
+          project={current}
+          epics={epics}
+          items={items}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => { reload(current); reloadEpics(current); }}
         />
       )}
     </div>
