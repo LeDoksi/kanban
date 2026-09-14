@@ -6,7 +6,7 @@ import { NewProject } from './NewProject';
 type Row = { project: Project; total: number; done: number; waiting: number };
 
 export function ProjectDrawer(
-  { onSelect, onClose }: { onSelect: (id: string) => void; onClose: () => void },
+  { current, onSelect, onClose }: { current: string; onSelect: (id: string) => void; onClose: () => void },
 ) {
   const [rows, setRows] = useState<Row[]>([]);
   const [err, setErr] = useState('');
@@ -62,29 +62,31 @@ export function ProjectDrawer(
 
         {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
 
-        <div className="space-y-1 mb-4">
+        <NewProject onCreated={id => { onSelect(id); onClose(); }} />
+
+        <div className="space-y-1 mt-4">
           {rows.map(({ project, total, done, waiting }) => (
             <button
               key={project.id}
               onClick={() => { onSelect(project.id); onClose(); }}
-              className="w-full flex items-center gap-3 text-left text-sm
-                         px-3 py-2 rounded hover:bg-(--color-panel)"
+              className={`w-full flex items-center gap-3 text-left text-sm
+                         px-3 py-2 rounded hover:bg-(--color-panel) ${
+                project.id === current ? 'bg-(--color-panel)' : ''
+              }`}
             >
-              <span className="font-medium">{project.name}</span>
+              <span className="font-medium min-w-0 truncate">{project.name}</span>
               {project.description && (
                 <span className="text-(--color-muted) truncate">
                   {project.description}
                 </span>
               )}
-              <span className="ml-auto text-(--color-muted)">{done}/{total}</span>
+              <span className="ml-auto shrink-0 text-(--color-muted)">{done}/{total}</span>
               {waiting > 0 && (
-                <span className="text-(--color-wait-ink)">{waiting} ждёт</span>
+                <span className="shrink-0 text-(--color-wait-ink)">{waiting} ждёт</span>
               )}
             </button>
           ))}
         </div>
-
-        <NewProject onCreated={id => { onSelect(id); onClose(); }} />
       </div>
     </div>
   );

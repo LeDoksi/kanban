@@ -234,15 +234,13 @@ export function Board() {
         <span className="text-sm text-(--color-muted)">
           {items.filter(i => i.status === 'done').length}/{items.length}
         </span>
-        <div className="ml-auto flex gap-2">
-          <button
-            onClick={() => setShowCreate(true)}
-            className="h-8 px-3 rounded-lg bg-(--color-ink)
-                       text-(--color-ground) text-sm"
-          >
-            Новая задача
-          </button>
-        </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="ml-auto h-8 px-3 rounded-lg bg-(--color-ink)
+                     text-(--color-ground) text-sm"
+        >
+          Новая задача
+        </button>
       </header>
 
       {/* Телефон — одна вертикаль, десктоп — четыре колонки. */}
@@ -311,6 +309,7 @@ export function Board() {
 
       {showProjects && (
         <ProjectDrawer
+          current={current}
           onSelect={id => { setCurrent(id); reloadProjects(); }}
           onClose={() => setShowProjects(false)}
         />

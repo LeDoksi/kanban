@@ -58,7 +58,7 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="w-72 space-y-2">
+    <form onSubmit={submit} className="w-full space-y-2">
       <input
         autoFocus
         value={name}
