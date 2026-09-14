@@ -69,20 +69,22 @@ export function ProjectDrawer(
             <button
               key={project.id}
               onClick={() => { onSelect(project.id); onClose(); }}
-              className={`w-full flex items-center gap-3 text-left text-sm
-                         px-3 py-2 rounded hover:bg-(--color-panel) ${
+              className={`w-full text-left text-sm px-3 py-2 rounded
+                         hover:bg-(--color-panel) ${
                 project.id === current ? 'bg-(--color-panel)' : ''
               }`}
             >
-              <span className="font-medium min-w-0 truncate">{project.name}</span>
+              <div className="flex items-center gap-3">
+                <span className="font-medium">{project.name}</span>
+                <span className="ml-auto shrink-0 text-(--color-muted)">{done}/{total}</span>
+                {waiting > 0 && (
+                  <span className="shrink-0 text-(--color-wait-ink)">{waiting} ждёт</span>
+                )}
+              </div>
               {project.description && (
-                <span className="text-(--color-muted) truncate">
+                <div className="text-(--color-muted) truncate mt-0.5">
                   {project.description}
-                </span>
-              )}
-              <span className="ml-auto shrink-0 text-(--color-muted)">{done}/{total}</span>
-              {waiting > 0 && (
-                <span className="shrink-0 text-(--color-wait-ink)">{waiting} ждёт</span>
+                </div>
               )}
             </button>
           ))}
