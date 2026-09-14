@@ -102,6 +102,7 @@ export function TaskModal(
     if (!confirm(`Удалить «${item.title}» навсегда?`)) return;
     const { error } = await sb.from('items').delete().eq('id', item.id);
     if (error) { setErr(error.message); return; }
+    onChanged();
     onClose();
   };
 

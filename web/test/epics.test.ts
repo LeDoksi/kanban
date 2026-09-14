@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { epicVisibility, groupItemsByEpic, emptyEpics, selectableEpics } from '../src/epics.ts';
+import { epicVisibility, groupItemsByEpic, emptyEpics, selectableEpics, epicProgress } from '../src/epics.ts';
 import type { Item, Epic } from '../src/supabase.ts';
 
 function mkItem(overrides: Partial<Item>): Item {
@@ -98,4 +98,17 @@ test('selectableEpics: текущий эпик задачи остаётся, д
   const items = [mkItem({ id: 'KAN-1', epic_id: 'KAN-E1', archived_at: '2026-01-01' })];
   const result = selectableEpics(epics, items, 'KAN-E1');
   assert.deepEqual(result.map(e => e.id), ['KAN-E1']);
+});
+
+test('epicProgress: считает done/archived как выполненные, из всех колонок', () => {
+  const items = [
+    mkItem({ id: 'KAN-1', epic_id: 'KAN-E1', status: 'done', archived_at: null }),
+    mkItem({ id: 'KAN-2', epic_id: 'KAN-E1', status: 'doing', archived_at: '2026-01-01' }),
+    mkItem({ id: 'KAN-3', epic_id: 'KAN-E1', status: 'backlog', archived_at: null }),
+  ];
+  assert.deepEqual(epicProgress('KAN-E1', items), { done: 2, total: 3 });
+});
+
+test('epicProgress: без задач — 0/0', () => {
+  assert.deepEqual(epicProgress('KAN-E1', []), { done: 0, total: 0 });
 });

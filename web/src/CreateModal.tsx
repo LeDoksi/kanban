@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { sb } from './supabase';
 import type { Item, Epic } from './supabase';
 import { guessType, stripPrefix } from './guess';
@@ -11,6 +11,12 @@ export function CreateModal(
   },
 ) {
   const [kind, setKind] = useState<'task' | 'epic'>('task');
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState<Item['type']>('task');

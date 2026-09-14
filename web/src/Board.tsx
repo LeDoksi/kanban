@@ -11,7 +11,7 @@ import { ArchiveList } from './ArchiveList';
 import { EpicModal } from './EpicModal';
 import { AllProjects } from './AllProjects';
 import { between } from './position';
-import { groupItemsByEpic, emptyEpics } from './epics';
+import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
 import type { Epic } from './supabase';
 
 const STATUS_ORDER: Item['status'][] = ['backlog', 'doing', 'waiting', 'done'];
@@ -322,18 +322,15 @@ function Column(
   // это их «домашняя» колонка, иначе эпик без задач нигде не виден.
   const pinnedEmpty = col.key === 'backlog' ? emptyEpics(epics, allItems) : [];
 
-  const epicProgress = (epicId: string) => {
-    const own = allItems.filter(i => i.epic_id === epicId);
-    const done = own.filter(i => i.status === 'done' || i.archived_at).length;
-    return `${done}/${own.length}`;
-  };
-
   return (
     <section ref={setNodeRef}>
       <h2 className="text-xs text-(--color-muted) mb-2 px-1">
         {col.label} {full.length > 0 && full.length}
       </h2>
-      <SortableContext items={list.map(i => i.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={[...groups.flatMap(g => g.items), ...ungrouped].map(i => i.id)}
+        strategy={verticalListSortingStrategy}
+      >
         <div className="space-y-3">
           {groups.map(({ epic, items: epicItems }) => (
             <div key={epic.id}>
@@ -341,7 +338,7 @@ function Column(
                 onClick={() => onOpenEpic(epic.id)}
                 className="text-[11px] text-(--color-muted) underline mb-1 px-1"
               >
-                {epic.title} ({epicProgress(epic.id)})
+                {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
               </button>
               <div className="space-y-2">
                 {epicItems.map(i => (
@@ -356,7 +353,7 @@ function Column(
               onClick={() => onOpenEpic(epic.id)}
               className="text-[11px] text-(--color-muted) underline px-1 block"
             >
-              {epic.title} (0/0)
+              {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
             </button>
           ))}
           {ungrouped.length > 0 && (

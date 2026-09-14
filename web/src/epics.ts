@@ -38,3 +38,9 @@ export function selectableEpics(
     .filter(e => epicVisibility(e.id, allItems) !== 'archived' || e.id === currentEpicId)
     .sort((a, b) => a.position - b.position);
 }
+
+export function epicProgress(epicId: string, allItems: Item[]): { done: number; total: number } {
+  const own = allItems.filter(i => i.epic_id === epicId);
+  const done = own.filter(i => i.status === 'done' || i.archived_at).length;
+  return { done, total: own.length };
+}

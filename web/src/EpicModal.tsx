@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sb } from './supabase';
 import type { Item, Epic } from './supabase';
+import { epicProgress } from './epics';
 
 export function EpicModal(
   { epicId, onClose, onOpenItem }: {
@@ -56,7 +57,7 @@ export function EpicModal(
     setEpic({ ...epic, goal: clean });
   };
 
-  const done = items.filter(i => i.status === 'done' || i.archived_at).length;
+  const { done, total } = epicProgress(epicId, items);
 
   return (
     <div
@@ -122,7 +123,7 @@ export function EpicModal(
         )}
 
         <div className="flex items-center gap-3 mb-5 text-sm text-(--color-muted)">
-          <span>{done}/{items.length}</span>
+          <span>{done}/{total}</span>
           {epic?.plan_path && (
             <a href={epic.plan_path} className="text-(--color-ink) underline">план</a>
           )}
