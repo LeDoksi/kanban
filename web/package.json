@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test test/guess.test.ts test/position.test.ts"
+    "test": "node --test test/guess.test.ts test/position.test.ts test/epics.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
