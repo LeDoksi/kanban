@@ -72,6 +72,27 @@ export function Board() {
 
   const currentProject = projects.find(p => p.id === current) ?? null;
 
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState('');
+
+  // Сбрасывать черновик при смене проекта или при обновлении описания
+  // с сервера — иначе после переключения проекта в textarea мог бы
+  // остаться текст от предыдущего.
+  useEffect(() => {
+    setEditingDescription(false);
+    setDescriptionDraft(currentProject?.description ?? '');
+  }, [current, currentProject?.description]);
+
+  const saveDescription = async () => {
+    setEditingDescription(false);
+    const clean = descriptionDraft.trim() || null;
+    if (!currentProject || clean === currentProject.description) return;
+    const { error } = await sb.from('projects')
+      .update({ description: clean }).eq('id', current);
+    if (error) { setErr(error.message); return; }
+    reloadProjects();
+  };
+
   useEffect(() => {
     reload(current);
     reloadEpics(current);
@@ -187,10 +208,27 @@ export function Board() {
         >
           {currentProject?.name ?? 'Проекты'}
         </button>
-        {currentProject?.description && (
-          <span className="text-sm text-(--color-muted)">
-            {currentProject.description}
-          </span>
+        {currentProject && (
+          editingDescription ? (
+            <textarea
+              autoFocus
+              value={descriptionDraft}
+              onChange={e => setDescriptionDraft(e.target.value)}
+              onBlur={saveDescription}
+              onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveDescription(); }}
+              rows={2}
+              placeholder="описание"
+              className="text-sm bg-transparent border border-(--color-line)
+                         rounded-lg p-1 outline-none resize-none"
+            />
+          ) : (
+            <span
+              onClick={() => setEditingDescription(true)}
+              className="text-sm text-(--color-muted) cursor-text"
+            >
+              {currentProject.description || 'описание — клик, чтобы добавить'}
+            </span>
+          )
         )}
         {err && <span className="text-sm text-(--color-danger-ink)">{err}</span>}
         <span className="text-sm text-(--color-muted)">
