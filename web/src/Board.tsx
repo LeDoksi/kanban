@@ -8,7 +8,7 @@ import { NewProject } from './NewProject';
 import { CreateModal } from './CreateModal';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
-import { EpicScreen } from './EpicScreen';
+import { EpicModal } from './EpicModal';
 import { AllProjects } from './AllProjects';
 import { between } from './position';
 import type { Epic } from './supabase';
@@ -127,32 +127,6 @@ export function Board() {
   if (viewAll) {
     return (
       <AllProjects onSelect={id => { setCurrent(id); setViewAll(false); }} />
-    );
-  }
-
-  if (viewEpic) {
-    return (
-      <>
-        <EpicScreen
-          epicId={viewEpic}
-          onBack={() => setViewEpic(null)}
-          onOpenItem={setOpenItem}
-        />
-        {openItem && (
-          <TaskModal
-            item={openItem}
-            epics={epics}
-            allItems={items}
-            onClose={() => setOpenItem(null)}
-            // ponytail: список экрана эпика не перечитывается на месте
-            // после правки через модалку — только при повторном заходе
-            // на экран. Обновить, если статус внутри эпика станет менять
-            // хотя бы каждый второй заход.
-            onChanged={() => setOpenItem(null)}
-            onOpenEpic={id => { setOpenItem(null); setViewEpic(id); }}
-          />
-        )}
-      </>
     );
   }
 
@@ -293,6 +267,14 @@ export function Board() {
           items={items}
           onClose={() => setShowCreate(false)}
           onCreated={() => { reload(current); reloadEpics(current); }}
+        />
+      )}
+
+      {viewEpic && (
+        <EpicModal
+          epicId={viewEpic}
+          onClose={() => setViewEpic(null)}
+          onOpenItem={i => { setViewEpic(null); setOpenItem(i); }}
         />
       )}
     </div>
