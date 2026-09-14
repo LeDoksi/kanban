@@ -32,7 +32,10 @@ function SignIn() {
     if (!email.trim()) { setError('Введите почту'); return; }
     setError('');
     setState('sending');
-    const { error } = await sb.auth.signInWithOtp({ email: email.trim() });
+    const { error } = await sb.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: false },
+    });
     if (error) { setError(error.message); setState('idle'); return; }
     setState('code');
   };
@@ -62,6 +65,7 @@ function SignIn() {
             onChange={e => { setCode(e.target.value); setError(''); }}
             placeholder="123456"
             inputMode="numeric"
+            autoComplete="one-time-code"
             maxLength={6}
             className="w-full h-9 px-3 rounded-lg bg-(--color-panel)
                        border border-(--color-line) text-sm outline-none
@@ -75,6 +79,13 @@ function SignIn() {
                        text-(--color-ground) text-sm"
           >
             {state === 'verifying' ? 'Проверяю…' : 'Войти'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setState('idle'); setCode(''); setError(''); }}
+            className="w-full text-xs text-(--color-muted)"
+          >
+            Другая почта
           </button>
         </form>
       </div>
