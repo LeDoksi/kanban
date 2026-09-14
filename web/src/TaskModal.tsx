@@ -84,6 +84,27 @@ export function TaskModal(
     onChanged();
   };
 
+  const archive = async () => {
+    const { error } = await sb.from('items')
+      .update({ archived_at: new Date().toISOString() }).eq('id', item.id);
+    if (error) { setErr(error.message); return; }
+    onChanged();
+  };
+
+  const restore = async () => {
+    const { error } = await sb.from('items')
+      .update({ status: 'doing', archived_at: null }).eq('id', item.id);
+    if (error) { setErr(error.message); return; }
+    onChanged();
+  };
+
+  const remove = async () => {
+    if (!confirm(`Удалить «${item.title}» навсегда?`)) return;
+    const { error } = await sb.from('items').delete().eq('id', item.id);
+    if (error) { setErr(error.message); return; }
+    onClose();
+  };
+
   const sendComment = async () => {
     const text = newComment.trim();
     if (!text) return;
@@ -291,6 +312,22 @@ export function TaskModal(
               Отправить
             </button>
           </div>
+        </div>
+
+        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-(--color-line)">
+          {item.status === 'done' && !item.archived_at && (
+            <button onClick={archive} className="text-xs text-(--color-muted)">
+              В архив
+            </button>
+          )}
+          {item.archived_at && (
+            <button onClick={restore} className="text-xs text-(--color-muted)">
+              Вернуть в работу
+            </button>
+          )}
+          <button onClick={remove} className="text-xs text-(--color-danger-ink) ml-auto">
+            Удалить
+          </button>
         </div>
       </div>
     </div>
