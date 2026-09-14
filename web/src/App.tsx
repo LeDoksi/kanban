@@ -23,7 +23,8 @@ export function App() {
 
 function SignIn() {
   const [email, setEmail] = useState('');
-  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [code, setCode] = useState('');
+  const [state, setState] = useState<'idle' | 'sending' | 'code' | 'verifying'>('idle');
   const [error, setError] = useState('');
 
   const send = async (e: React.FormEvent) => {
@@ -31,20 +32,51 @@ function SignIn() {
     if (!email.trim()) { setError('Введите почту'); return; }
     setError('');
     setState('sending');
-    const { error } = await sb.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: window.location.href },
-    });
+    const { error } = await sb.auth.signInWithOtp({ email: email.trim() });
     if (error) { setError(error.message); setState('idle'); return; }
-    setState('sent');
+    setState('code');
   };
 
-  if (state === 'sent') {
+  const verify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim()) { setError('Введите код из письма'); return; }
+    setError('');
+    setState('verifying');
+    const { error } = await sb.auth.verifyOtp({
+      email: email.trim(), token: code.trim(), type: 'email',
+    });
+    if (error) { setError(error.message); setState('code'); return; }
+  };
+
+  if (state === 'code' || state === 'verifying') {
     return (
       <div className="min-h-dvh grid place-items-center p-6">
-        <p className="text-sm text-(--color-muted) text-center">
-          Ссылка ушла на {email}.<br />Открой её на этом устройстве.
-        </p>
+        <form onSubmit={verify} className="w-full max-w-72 space-y-3">
+          <h1 className="text-base font-medium">Канбан</h1>
+          <p className="text-sm text-(--color-muted)">
+            Код ушёл на {email}.
+          </p>
+          <input
+            autoFocus
+            value={code}
+            onChange={e => { setCode(e.target.value); setError(''); }}
+            placeholder="123456"
+            inputMode="numeric"
+            maxLength={6}
+            className="w-full h-9 px-3 rounded-lg bg-(--color-panel)
+                       border border-(--color-line) text-sm outline-none
+                       focus:border-(--color-muted)"
+          />
+          {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
+          <button
+            type="submit"
+            disabled={state === 'verifying'}
+            className="w-full h-9 rounded-lg bg-(--color-ink)
+                       text-(--color-ground) text-sm"
+          >
+            {state === 'verifying' ? 'Проверяю…' : 'Войти'}
+          </button>
+        </form>
       </div>
     );
   }
@@ -62,14 +94,14 @@ function SignIn() {
                      border border-(--color-line) text-sm outline-none
                      focus:border-(--color-muted)"
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
         <button
           type="submit"
           disabled={state === 'sending'}
           className="w-full h-9 rounded-lg bg-(--color-ink)
                      text-(--color-ground) text-sm"
         >
-          {state === 'sending' ? 'Отправляю…' : 'Прислать ссылку'}
+          {state === 'sending' ? 'Отправляю…' : 'Прислать код'}
         </button>
       </form>
     </div>
