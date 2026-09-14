@@ -1,25 +1,36 @@
 import { useState } from 'react';
 import { sb } from './supabase';
+import { slugify, prefixify } from './slug';
 
 export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [id, setId] = useState('');
   const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
   const [prefix, setPrefix] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [prefixTouched, setPrefixTouched] = useState(false);
   const [repoPath, setRepoPath] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const onName = (v: string) => {
+    setName(v);
+    setError('');
+    const auto = slugify(v);
+    if (!slugTouched) setSlug(auto);
+    if (!prefixTouched) setPrefix(prefixify(auto));
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id.trim() || !name.trim() || !prefix.trim()) {
-      setError('Заполни слаг, имя и префикс');
+    if (!name.trim() || !slug.trim() || !prefix.trim()) {
+      setError('Напиши имя — слаг и префикс подставятся сами');
       return;
     }
     setBusy(true);
     const { error } = await sb.from('projects').insert({
-      id: id.trim(),
+      id: slug.trim(),
       name: name.trim(),
       prefix: prefix.trim().toUpperCase(),
       description: description.trim() || null,
@@ -28,9 +39,10 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
     setBusy(false);
     if (error) { setError(error.message); return; }
 
-    const created = id.trim();
-    setId(''); setName(''); setPrefix(''); setRepoPath('');
-    setDescription(''); setOpen(false);
+    const created = slug.trim();
+    setName(''); setSlug(''); setPrefix('');
+    setSlugTouched(false); setPrefixTouched(false);
+    setRepoPath(''); setDescription(''); setOpen(false);
     onCreated(created);
   };
 
@@ -49,26 +61,28 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
     <form onSubmit={submit} className="w-72 space-y-2">
       <input
         autoFocus
-        value={id}
-        onChange={e => { setId(e.target.value); setError(''); }}
-        placeholder="слаг: family-app"
-        className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                   border border-(--color-line) outline-none"
-      />
-      <input
         value={name}
-        onChange={e => setName(e.target.value)}
+        onChange={e => onName(e.target.value)}
         placeholder="имя: Семейное приложение"
         className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
                    border border-(--color-line) outline-none"
       />
-      <input
-        value={prefix}
-        onChange={e => setPrefix(e.target.value)}
-        placeholder="префикс: FAM"
-        className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                   border border-(--color-line) outline-none"
-      />
+      <div className="flex gap-2">
+        <input
+          value={slug}
+          onChange={e => { setSlug(e.target.value); setSlugTouched(true); setError(''); }}
+          placeholder="слаг"
+          className="flex-1 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+                     border border-(--color-line) outline-none"
+        />
+        <input
+          value={prefix}
+          onChange={e => { setPrefix(e.target.value); setPrefixTouched(true); setError(''); }}
+          placeholder="префикс"
+          className="w-20 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+                     border border-(--color-line) outline-none"
+        />
+      </div>
       <input
         value={description}
         onChange={e => setDescription(e.target.value)}
