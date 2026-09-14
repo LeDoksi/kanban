@@ -7,6 +7,10 @@ const STATUS_LABEL: Record<Item['status'], string> = {
   waiting: 'Нужно от тебя', done: 'Готово',
 };
 
+const TYPE_LABEL: Record<Item['type'], string> = {
+  task: 'задача', bug: 'баг', chore: 'долг',
+};
+
 export function TaskModal(
   { item, onClose, onChanged, onOpenEpic }: {
     item: Item; onClose: () => void; onChanged: () => void;
@@ -15,9 +19,11 @@ export function TaskModal(
 ) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [err, setErr] = useState('');
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingBody, setEditingBody] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(item.title);
+  const [bodyDraft, setBodyDraft] = useState(item.body ?? '');
 
-  // Комментарии грузятся только при открытии одной задачи, а не для
-  // всех карточек доски сразу — тот же принцип, что у get() в MCP.
   useEffect(() => {
     sb.from('comments').select('*')
       .eq('item_id', item.id).order('created_at')
@@ -32,6 +38,14 @@ export function TaskModal(
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  // Синхронизировать черновики, если доска перечиталась (Realtime,
+  // правка агентом) — иначе после чужой правки инлайн-редактор будет
+  // молча затирать её своим устаревшим черновиком.
+  useEffect(() => {
+    setTitleDraft(item.title);
+    setBodyDraft(item.body ?? '');
+  }, [item.id, item.title, item.body]);
 
   const toggleCheck = async (i: number) => {
     const { data, error: readErr } = await sb.from('items')
@@ -54,6 +68,30 @@ export function TaskModal(
     onChanged();
   };
 
+  const setType = async (type: Item['type']) => {
+    const { error } = await sb.from('items').update({ type }).eq('id', item.id);
+    if (error) { setErr(error.message); return; }
+    onChanged();
+  };
+
+  const saveTitle = async () => {
+    setEditingTitle(false);
+    const clean = titleDraft.trim();
+    if (!clean || clean === item.title) { setTitleDraft(item.title); return; }
+    const { error } = await sb.from('items').update({ title: clean }).eq('id', item.id);
+    if (error) { setErr(error.message); return; }
+    onChanged();
+  };
+
+  const saveBody = async () => {
+    setEditingBody(false);
+    const clean = bodyDraft.trim() || null;
+    if (clean === item.body) return;
+    const { error } = await sb.from('items').update({ body: clean }).eq('id', item.id);
+    if (error) { setErr(error.message); return; }
+    onChanged();
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
@@ -65,11 +103,28 @@ export function TaskModal(
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div>
+          <div className="flex-1">
             <span className="text-[11px] font-mono text-(--color-muted)">
               {item.id}
             </span>
-            <h2 className="text-base font-medium">{item.title}</h2>
+            {editingTitle ? (
+              <input
+                autoFocus
+                value={titleDraft}
+                onChange={e => setTitleDraft(e.target.value)}
+                onBlur={saveTitle}
+                onKeyDown={e => { if (e.key === 'Enter') saveTitle(); }}
+                className="block w-full text-base font-medium bg-transparent
+                           border-b border-(--color-line) outline-none"
+              />
+            ) : (
+              <h2
+                onClick={() => setEditingTitle(true)}
+                className="text-base font-medium cursor-text"
+              >
+                {item.title}
+              </h2>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -80,18 +135,37 @@ export function TaskModal(
           </button>
         </div>
 
-        <select
-          value={item.status}
-          onChange={e => move(e.target.value as Item['status'])}
-          onClick={e => e.stopPropagation()}
-          aria-label="Статус"
-          className="h-8 px-2 rounded-lg bg-(--color-panel)
-                     border border-(--color-line) text-sm mb-4"
-        >
+        <div className="flex flex-wrap gap-1.5 mb-2">
           {(Object.keys(STATUS_LABEL) as Item['status'][]).map(s => (
-            <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            <button
+              key={s}
+              onClick={() => move(s)}
+              className={`text-[11px] px-2 py-1 rounded-full border ${
+                item.status === s
+                  ? 'border-(--color-muted)'
+                  : 'border-(--color-line) text-(--color-muted)'
+              }`}
+            >
+              {STATUS_LABEL[s]}
+            </button>
           ))}
-        </select>
+        </div>
+
+        <div className="flex gap-1.5 mb-4">
+          {(Object.keys(TYPE_LABEL) as Item['type'][]).map(t => (
+            <button
+              key={t}
+              onClick={() => setType(t)}
+              className={`text-[11px] px-2 py-1 rounded-full border ${
+                item.type === t
+                  ? 'border-(--color-muted)'
+                  : 'border-(--color-line) text-(--color-muted)'
+              }`}
+            >
+              {TYPE_LABEL[t]}
+            </button>
+          ))}
+        </div>
 
         {item.epic_id && onOpenEpic && (
           <button
@@ -104,8 +178,27 @@ export function TaskModal(
 
         {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
 
-        {item.body && (
-          <p className="text-sm whitespace-pre-wrap mb-4">{item.body}</p>
+        {editingBody ? (
+          <textarea
+            autoFocus
+            value={bodyDraft}
+            onChange={e => setBodyDraft(e.target.value)}
+            onBlur={saveBody}
+            onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveBody(); }}
+            rows={3}
+            placeholder="описание"
+            className="w-full p-2 mb-4 rounded-lg bg-(--color-panel) text-sm
+                       border border-(--color-line) outline-none resize-none"
+          />
+        ) : (
+          <p
+            onClick={() => setEditingBody(true)}
+            className="text-sm whitespace-pre-wrap mb-4 cursor-text min-h-[1.5em]"
+          >
+            {item.body || (
+              <span className="text-(--color-muted)">описание — клик, чтобы добавить</span>
+            )}
+          </p>
         )}
 
         {item.blocks.length > 0 && (
