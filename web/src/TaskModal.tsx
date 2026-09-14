@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sb } from './supabase';
-import type { Item, Comment } from './supabase';
+import type { Item, Comment, Epic } from './supabase';
+import { selectableEpics } from './epics';
 
 const STATUS_LABEL: Record<Item['status'], string> = {
   backlog: 'Backlog', doing: 'В работе',
@@ -12,12 +13,14 @@ const TYPE_LABEL: Record<Item['type'], string> = {
 };
 
 export function TaskModal(
-  { item, onClose, onChanged, onOpenEpic }: {
-    item: Item; onClose: () => void; onChanged: () => void;
+  { item, epics, allItems, onClose, onChanged, onOpenEpic }: {
+    item: Item; epics: Epic[]; allItems: Item[];
+    onClose: () => void; onChanged: () => void;
     onOpenEpic?: (epicId: string) => void;
   },
 ) {
   const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
   const [err, setErr] = useState('');
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingBody, setEditingBody] = useState(false);
@@ -72,6 +75,26 @@ export function TaskModal(
     const { error } = await sb.from('items').update({ type }).eq('id', item.id);
     if (error) { setErr(error.message); return; }
     onChanged();
+  };
+
+  const setEpic = async (epicId: string) => {
+    const { error } = await sb.from('items')
+      .update({ epic_id: epicId || null }).eq('id', item.id);
+    if (error) { setErr(error.message); return; }
+    onChanged();
+  };
+
+  const sendComment = async () => {
+    const text = newComment.trim();
+    if (!text) return;
+    const { error } = await sb.from('comments')
+      .insert({ item_id: item.id, author: 'me', body: text });
+    if (error) { setErr(error.message); return; }
+    setNewComment('');
+    const { data, error: readErr } = await sb.from('comments').select('*')
+      .eq('item_id', item.id).order('created_at');
+    if (readErr) { setErr(readErr.message); return; }
+    setComments((data ?? []) as Comment[]);
   };
 
   const saveTitle = async () => {
@@ -167,14 +190,27 @@ export function TaskModal(
           ))}
         </div>
 
-        {item.epic_id && onOpenEpic && (
-          <button
-            onClick={() => onOpenEpic(item.epic_id!)}
-            className="text-xs text-(--color-muted) underline block mb-3"
+        <div className="flex items-center gap-2 mb-3">
+          <select
+            value={item.epic_id ?? ''}
+            onChange={e => setEpic(e.target.value)}
+            className="h-7 px-1.5 rounded text-[11px] bg-transparent
+                       border border-(--color-line) text-(--color-muted)"
           >
-            эпик: {item.epic_id}
-          </button>
-        )}
+            <option value="">— без эпика —</option>
+            {selectableEpics(epics, allItems, item.epic_id).map(ep => (
+              <option key={ep.id} value={ep.id}>{ep.title}</option>
+            ))}
+          </select>
+          {item.epic_id && onOpenEpic && (
+            <button
+              onClick={() => onOpenEpic(item.epic_id!)}
+              className="text-xs text-(--color-muted) underline"
+            >
+              открыть эпик
+            </button>
+          )}
+        </div>
 
         {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
 
@@ -224,18 +260,38 @@ export function TaskModal(
           </ul>
         )}
 
-        {comments.length > 0 && (
-          <div className="space-y-2 border-t border-(--color-line) pt-3">
-            {comments.map(c => (
-              <div key={c.id} className="text-xs">
-                <span className="text-(--color-muted)">
-                  {c.created_at.slice(0, 10)} {c.author}:
-                </span>{' '}
-                {c.body}
-              </div>
-            ))}
+        <div className="border-t border-(--color-line) pt-3">
+          {comments.length > 0 && (
+            <div className="space-y-2 mb-2">
+              {comments.map(c => (
+                <div key={c.id} className="text-xs">
+                  <span className="text-(--color-muted)">
+                    {c.created_at.slice(0, 10)} {c.author}:
+                  </span>{' '}
+                  {c.body}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') sendComment(); }}
+              placeholder="комментарий"
+              className="flex-1 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+                         border border-(--color-line) outline-none"
+            />
+            <button
+              onClick={sendComment}
+              disabled={!newComment.trim()}
+              className="h-8 px-3 rounded-lg bg-(--color-ink) text-(--color-ground)
+                         text-sm disabled:opacity-40"
+            >
+              Отправить
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

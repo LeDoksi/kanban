@@ -141,6 +141,8 @@ export function Board() {
         {openItem && (
           <TaskModal
             item={openItem}
+            epics={epics}
+            allItems={items}
             onClose={() => setOpenItem(null)}
             // ponytail: список экрана эпика не перечитывается на месте
             // после правки через модалку — только при повторном заходе
@@ -268,6 +270,8 @@ export function Board() {
       {openItem && (
         <TaskModal
           item={openItem}
+          epics={epics}
+          allItems={items}
           onClose={() => setOpenItem(null)}
           onChanged={() => reload(current)}
           onOpenEpic={id => { setOpenItem(null); setViewEpic(id); }}
