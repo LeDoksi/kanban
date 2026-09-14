@@ -11,6 +11,7 @@ import { ArchiveList } from './ArchiveList';
 import { EpicModal } from './EpicModal';
 import { AllProjects } from './AllProjects';
 import { between } from './position';
+import { groupItemsByEpic, emptyEpics } from './epics';
 import type { Epic } from './supabase';
 
 const STATUS_ORDER: Item['status'][] = ['backlog', 'doing', 'waiting', 'done'];
@@ -231,10 +232,13 @@ export function Board() {
               key={col.key}
               col={col}
               items={items.filter(i => i.status === col.key && !i.archived_at)}
+              epics={epics}
+              allItems={items}
               archivedCount={archivedCount}
               onChanged={() => reload(current)}
               onError={setErr}
               onOpen={setOpenItem}
+              onOpenEpic={id => setViewEpic(id)}
               onShowArchive={() => setShowArchive(true)}
             />
           ))}
@@ -282,10 +286,12 @@ export function Board() {
 }
 
 function Column(
-  { col, items, archivedCount, onChanged, onError, onOpen, onShowArchive }: {
-    col: typeof COLUMNS[number]; items: Item[]; archivedCount: number;
+  { col, items, epics, allItems, archivedCount, onChanged, onError, onOpen, onOpenEpic, onShowArchive }: {
+    col: typeof COLUMNS[number]; items: Item[]; epics: Epic[]; allItems: Item[];
+    archivedCount: number;
     onChanged: () => void; onError: (msg: string) => void;
-    onOpen: (item: Item) => void; onShowArchive: () => void;
+    onOpen: (item: Item) => void; onOpenEpic: (epicId: string) => void;
+    onShowArchive: () => void;
   },
 ) {
   const { setNodeRef } = useDroppable({ id: col.key });
@@ -293,7 +299,8 @@ function Column(
   // «Готово» — единственная колонка, которая обрезается: открытые задачи
   // не должны прятаться, а закрытых со временем становится много.
   // Сортируем по дате закрытия — «последние несколько» значит недавно
-  // завершённые, а не недавно созданные.
+  // завершённые, а не недавно созданные. Группировка по эпику — уже
+  // поверх этого обрезанного списка, кап не меняется.
   const capped = col.key === 'done';
   const full = capped
     ? [...items].sort(
@@ -302,22 +309,57 @@ function Column(
   const list = capped ? full.slice(0, DONE_SHOWN) : full;
   const hiddenDone = capped ? full.length - list.length : 0;
 
+  const groups = groupItemsByEpic(list, epics);
+  const groupedIds = new Set(groups.flatMap(g => g.items.map(i => i.id)));
+  const ungrouped = list.filter(i => !groupedIds.has(i.id));
+  // Пустые эпики (ни одной задачи вообще) торчат только в Backlog —
+  // это их «домашняя» колонка, иначе эпик без задач нигде не виден.
+  const pinnedEmpty = col.key === 'backlog' ? emptyEpics(epics, allItems) : [];
+
+  const epicProgress = (epicId: string) => {
+    const own = allItems.filter(i => i.epic_id === epicId);
+    const done = own.filter(i => i.status === 'done' || i.archived_at).length;
+    return `${done}/${own.length}`;
+  };
+
   return (
     <section ref={setNodeRef}>
       <h2 className="text-xs text-(--color-muted) mb-2 px-1">
         {col.label} {full.length > 0 && full.length}
       </h2>
       <SortableContext items={list.map(i => i.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-2">
-          {list.map(i => (
-            <Card
-              key={i.id}
-              item={i}
-              onChanged={onChanged}
-              onError={onError}
-              onOpen={onOpen}
-            />
+        <div className="space-y-3">
+          {groups.map(({ epic, items: epicItems }) => (
+            <div key={epic.id}>
+              <button
+                onClick={() => onOpenEpic(epic.id)}
+                className="text-[11px] text-(--color-muted) underline mb-1 px-1"
+              >
+                {epic.title} ({epicProgress(epic.id)})
+              </button>
+              <div className="space-y-2">
+                {epicItems.map(i => (
+                  <Card key={i.id} item={i} onChanged={onChanged} onError={onError} onOpen={onOpen} />
+                ))}
+              </div>
+            </div>
           ))}
+          {pinnedEmpty.map(epic => (
+            <button
+              key={epic.id}
+              onClick={() => onOpenEpic(epic.id)}
+              className="text-[11px] text-(--color-muted) underline px-1 block"
+            >
+              {epic.title} (0/0)
+            </button>
+          ))}
+          {ungrouped.length > 0 && (
+            <div className="space-y-2">
+              {ungrouped.map(i => (
+                <Card key={i.id} item={i} onChanged={onChanged} onError={onError} onOpen={onOpen} />
+              ))}
+            </div>
+          )}
         </div>
       </SortableContext>
       {capped && (hiddenDone > 0 || archivedCount > 0) && (
