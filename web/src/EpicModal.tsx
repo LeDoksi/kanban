@@ -57,6 +57,18 @@ export function EpicModal(
     setEpic({ ...epic, goal: clean });
   };
 
+  const remove = async () => {
+    // items.epic_id -> epics.id is ON DELETE SET NULL: задачи не удаляются,
+    // просто теряют привязку к эпику.
+    const warning = items.length > 0
+      ? `Удалить эпик «${epic?.title}»? Задачи (${items.length}) останутся, но потеряют привязку к нему.`
+      : `Удалить эпик «${epic?.title}»?`;
+    if (!confirm(warning)) return;
+    const { error } = await sb.from('epics').delete().eq('id', epicId);
+    if (error) { setErr(error.message); return; }
+    onClose();
+  };
+
   const { done, total } = epicProgress(epicId, items);
 
   return (
@@ -156,6 +168,12 @@ export function EpicModal(
           {items.length === 0 && (
             <p className="text-sm text-(--color-muted)">Пока без задач.</p>
           )}
+        </div>
+
+        <div className="flex mt-4 pt-3 border-t border-(--color-line)">
+          <button onClick={remove} className="text-xs text-(--color-danger-ink) ml-auto">
+            Удалить эпик
+          </button>
         </div>
       </div>
     </div>
