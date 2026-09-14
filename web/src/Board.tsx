@@ -4,12 +4,11 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { sb } from './supabase';
 import type { Item, Project } from './supabase';
-import { NewProject } from './NewProject';
 import { CreateModal } from './CreateModal';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 import { EpicModal } from './EpicModal';
-import { AllProjects } from './AllProjects';
+import { ProjectDrawer } from './ProjectDrawer';
 import { between } from './position';
 import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
 import type { Epic } from './supabase';
@@ -35,7 +34,7 @@ export function Board() {
   const [showArchive, setShowArchive] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [viewEpic, setViewEpic] = useState<string | null>(null);
-  const [viewAll, setViewAll] = useState(false);
+  const [showProjects, setShowProjects] = useState(false);
 
   // Архивные грузим тоже: из колонок они убраны, но в счётчике остаются —
   // иначе прогресс едет назад, когда готовые карточки уходят в архив.
@@ -125,12 +124,6 @@ export function Board() {
     activationConstraint: { distance: 5 },
   }));
 
-  if (viewAll) {
-    return (
-      <AllProjects onSelect={id => { setCurrent(id); setViewAll(false); }} />
-    );
-  }
-
   const onDragEnd = async (e: DragEndEvent) => {
     const itemId = e.active.id as string;
     const overId = e.over?.id as string | undefined;
@@ -188,21 +181,12 @@ export function Board() {
     <div className="min-h-dvh p-4 md:p-6 max-w-6xl mx-auto">
       <header className="flex items-center gap-3 mb-5 flex-wrap">
         <button
-          onClick={() => setViewAll(true)}
-          className="text-sm text-(--color-muted)"
-        >
-          Все проекты
-        </button>
-        <select
-          value={current}
-          onChange={e => setCurrent(e.target.value)}
-          className="h-8 px-2 rounded-lg bg-(--color-panel)
+          onClick={() => setShowProjects(true)}
+          className="h-8 px-3 rounded-lg bg-(--color-panel)
                      border border-(--color-line) text-sm"
         >
-          {projects.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+          {currentProject?.name ?? 'Проекты'}
+        </button>
         {currentProject?.description && (
           <span className="text-sm text-(--color-muted)">
             {currentProject.description}
@@ -213,7 +197,6 @@ export function Board() {
           {items.filter(i => i.status === 'done').length}/{items.length}
         </span>
         <div className="ml-auto flex gap-2">
-          <NewProject onCreated={id => { reloadProjects(); setCurrent(id); }} />
           <button
             onClick={() => setShowCreate(true)}
             className="h-8 px-3 rounded-lg bg-(--color-ink)
@@ -285,6 +268,13 @@ export function Board() {
           epicId={viewEpic}
           onClose={() => setViewEpic(null)}
           onOpenItem={i => { setViewEpic(null); setOpenItem(i); }}
+        />
+      )}
+
+      {showProjects && (
+        <ProjectDrawer
+          onSelect={id => { setCurrent(id); reloadProjects(); }}
+          onClose={() => setShowProjects(false)}
         />
       )}
     </div>
