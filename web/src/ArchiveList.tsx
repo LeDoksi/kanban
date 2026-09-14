@@ -1,8 +1,9 @@
 import type { Item } from './supabase';
 
 export function ArchiveList(
-  { items, onOpen, onClose }: {
-    items: Item[]; onOpen: (item: Item) => void; onClose: () => void;
+  { items, onOpen, onRestore, onClose }: {
+    items: Item[]; onOpen: (item: Item) => void;
+    onRestore: (item: Item) => void; onClose: () => void;
   },
 ) {
   return (
@@ -32,17 +33,29 @@ export function ArchiveList(
 
         <div className="space-y-1">
           {items.map(i => (
-            <button
+            <div
               key={i.id}
-              onClick={() => onOpen(i)}
-              className="w-full text-left text-sm px-2 py-1.5 rounded
+              className="flex items-center gap-2 px-2 py-1.5 rounded
                          hover:bg-(--color-panel)"
             >
-              <span className="text-[11px] font-mono text-(--color-muted) mr-2">
-                {i.id}
-              </span>
-              {i.title}
-            </button>
+              <button
+                onClick={() => onOpen(i)}
+                className="flex-1 text-left text-sm"
+              >
+                <span className="text-[11px] font-mono text-(--color-muted) mr-2">
+                  {i.id}
+                </span>
+                {i.title}
+              </button>
+              {i.archived_at && (
+                <button
+                  onClick={() => onRestore(i)}
+                  className="text-[11px] text-(--color-muted) underline shrink-0"
+                >
+                  вернуть в работу
+                </button>
+              )}
+            </div>
           ))}
         </div>
       </div>
