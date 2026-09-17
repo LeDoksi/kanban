@@ -423,10 +423,13 @@ function Column(
       >
         <div className="space-y-3">
           {groups.map(({ epic, items: epicItems }) => (
-            <div key={epic.id}>
+            // Рамка вокруг всей группы — иначе не видно, где кончаются
+            // задачи эпика и начинаются несвязанные (выглядели одинаково,
+            // отличаясь только подписью сверху).
+            <div key={epic.id} className="rounded-lg border border-(--color-line) p-1.5">
               <button
                 onClick={() => onOpenEpic(epic.id)}
-                className="text-[11px] text-(--color-muted) underline mb-1 px-1"
+                className="text-[11px] text-(--color-muted) underline mb-1 px-1 block"
               >
                 {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
               </button>
