@@ -13,9 +13,8 @@ import { Editable } from './Editable';
 import { between } from './position';
 import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
 import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
+import { swipeTarget } from './swipe';
 import type { Epic } from './supabase';
-
-const STATUS_ORDER: Item['status'][] = ['backlog', 'doing', 'waiting', 'done'];
 
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog' },
@@ -464,15 +463,14 @@ function Card(
   // Достаточно для «свайп меняет статус»; плавный отскок и инерция —
   // если без них станет реально раздражать в использовании.
   const onTouchEnd = () => {
-    const THRESHOLD = 60;
-    if (Math.abs(dragX) > THRESHOLD) {
-      const i = STATUS_ORDER.indexOf(item.status);
-      const next = dragX > 0 ? i + 1 : i - 1;
-      if (next >= 0 && next < STATUS_ORDER.length) move(STATUS_ORDER[next]);
-    }
+    if (target) move(target);
     setTouchStartX(null);
     setDragX(0);
   };
+
+  // Куда денёт свайп, если отпустить прямо сейчас — без этого не видно,
+  // что произойдёт, пока карточка уже не улетела в другой статус.
+  const target = swipeTarget(item.status, dragX);
 
   const move = async (status: Item['status']) => {
     const { error } = await setStatus(item.id, status);
@@ -499,10 +497,19 @@ function Card(
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      className={`rounded-lg p-2.5 text-sm cursor-grab touch-pan-y ${
+      className={`relative rounded-lg p-2.5 text-sm cursor-grab touch-pan-y ${
         waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
-      }`}
+      } ${target ? 'ring-2 ring-(--color-muted)' : ''}`}
     >
+      {target && (
+        <span
+          className={`absolute top-1/2 -translate-y-1/2 text-[11px] px-1.5 py-0.5
+                      rounded bg-(--color-ink) text-(--color-ground) whitespace-nowrap
+                      ${dragX > 0 ? 'right-2' : 'left-2'}`}
+        >
+          → {COLUMNS.find(c => c.key === target)?.label}
+        </span>
+      )}
       <div className="flex items-center gap-1.5 mb-1">
         <span
           className={`text-[11px] font-mono ${

@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs",
-    "test": "node --test test/guess.test.ts test/position.test.ts test/epics.test.ts test/slug.test.ts test/done.test.ts"
+    "test": "node --test test/guess.test.ts test/position.test.ts test/epics.test.ts test/slug.test.ts test/done.test.ts test/swipe.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
