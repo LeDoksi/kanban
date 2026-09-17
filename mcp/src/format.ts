@@ -3,12 +3,17 @@
    чтобы столбец читался глазом. */
 import type { Item, Comment, Epic } from './db.ts';
 
+export type EpicSummary = { id: string; title: string; done: number; total: number };
+
 export type BoardHead = {
   project: string;
   description?: string | null;
   epic?: { id: string; title: string } | null;
   done: number;
   total: number;
+  // Список эпиков проекта — печатается только когда доска не сужена
+  // до одного эпика (board({epic}) уже показывает его как head.epic).
+  epics?: EpicSummary[];
 };
 
 const MARK: Record<Item['status'], string> = {
@@ -28,6 +33,14 @@ export function formatBoard(items: Item[], head: BoardHead): string {
   const desc = head.description ? ` — ${head.description}` : '';
   const lines = [`${head.project}${desc}${epic} (${head.done}/${head.total})`];
 
+  // Эпики проекта — единственный способ узнать их ID без похода через
+  // get() задачи внутри одного из них.
+  if (head.epics?.length) {
+    lines.push('эпики: ' + head.epics
+      .map(e => `${e.id} ${e.title} (${e.done}/${e.total})`)
+      .join(', '));
+  }
+
   const open = items.filter(i => i.status !== 'done' && !i.archived_at);
   if (!open.length) {
     lines.push('пусто');
@@ -38,13 +51,16 @@ export function formatBoard(items: Item[], head: BoardHead): string {
   open.sort((a, b) =>
     order[a.status] - order[b.status] || a.position - b.position);
 
-  const width = Math.max(...open.map(i => String(i.seq).length));
+  // Печатаем полный id (с префиксом проекта), а не голый seq: без
+  // префикса get()/update() не находят задачу, и голый номер с доски
+  // для них бесполезен.
+  const width = Math.max(...open.map(i => i.id.length));
   for (const i of open) {
-    const seq = String(i.seq).padStart(width);
+    const id = i.id.padStart(width);
     const type = i.type === 'task' ? '' : ` ${i.type}`;
     const prog = progress(i.checklist);
     const tail = [i.status, prog, type.trim()].filter(Boolean).join(' ');
-    lines.push(`${seq} ${MARK[i.status]} ${i.title}  ${tail}`.trimEnd());
+    lines.push(`${id} ${MARK[i.status]} ${i.title}  ${tail}`.trimEnd());
   }
   return lines.join('\n');
 }

@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react';
 import { DndContext, type DragEndEvent, MouseSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { sb } from './supabase';
+import { sb, setStatus, closedAtFor } from './supabase';
 import type { Item, Project } from './supabase';
 import { CreateModal } from './CreateModal';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 import { EpicModal } from './EpicModal';
 import { ProjectDrawer } from './ProjectDrawer';
+import { Editable } from './Editable';
 import { between } from './position';
 import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
+import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
 import type { Epic } from './supabase';
 
 const STATUS_ORDER: Item['status'][] = ['backlog', 'doing', 'waiting', 'done'];
@@ -21,8 +23,6 @@ const COLUMNS = [
   { key: 'waiting', label: 'Нужно от тебя' },
   { key: 'done',    label: 'Готово' },
 ] as const;
-
-const DONE_SHOWN = 5;
 
 export function Board() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -36,15 +36,24 @@ export function Board() {
   const [viewEpic, setViewEpic] = useState<string | null>(null);
   const [showProjects, setShowProjects] = useState(false);
 
-  // Архивные грузим тоже: из колонок они убраны, но в счётчике остаются —
-  // иначе прогресс едет назад, когда готовые карточки уходят в архив.
+  // Ошибка держится на экране гарантированные несколько секунд, а не до
+  // ближайшего фонового reload() — иначе Realtime мог погасить её раньше,
+  // чем её успели прочитать.
+  useEffect(() => {
+    if (!err) return;
+    const t = setTimeout(() => setErr(''), 4000);
+    return () => clearTimeout(t);
+  }, [err]);
+
+  // Realtime дёргает reload() на любое изменение — если он гасит err
+  // сразу же, сообщение об ошибке живёт меньше секунды. Очищаем err
+  // отдельным таймером (ниже), а не тут.
   const reload = async (project: string) => {
     if (!project) return;
     const { data, error } = await sb.from('items').select('*')
       .eq('project_id', project)
       .order('position');
     if (error) { setErr(error.message); return; }
-    setErr('');
     const list = (data ?? []) as Item[];
     setItems(list);
     setOpenItem(prev => prev ? (list.find(i => i.id === prev.id) ?? prev) : null);
@@ -122,16 +131,10 @@ export function Board() {
   // То же множество «показанных в Готово», что и в рендере колонок —
   // архив показывает всё остальное: и настоящие архивные карточки, и
   // готовые сверх видимых DONE_SHOWN.
-  const shownDoneIds = new Set(
-    items
-      .filter(i => i.status === 'done' && !i.archived_at)
-      .sort((a, b) => (b.closed_at ?? '').localeCompare(a.closed_at ?? ''))
-      .slice(0, DONE_SHOWN)
-      .map(i => i.id),
-  );
+  const doneShownIds = shownDoneIds(items);
   const archivedCount = items.filter(i => i.archived_at).length;
   const archiveItems = items
-    .filter(i => i.archived_at || (i.status === 'done' && !shownDoneIds.has(i.id)))
+    .filter(i => i.archived_at || (i.status === 'done' && !doneShownIds.has(i.id)))
     .sort((a, b) =>
       (b.closed_at ?? b.archived_at ?? '')
         .localeCompare(a.closed_at ?? a.archived_at ?? ''));
@@ -188,13 +191,18 @@ export function Board() {
     }
     const position = between(before, after);
 
-    const patch: Record<string, unknown> = { position };
+    const patch: Partial<Pick<Item, 'position' | 'status' | 'closed_at'>> = { position };
     if (dragged.status !== targetStatus) {
       patch.status = targetStatus;
-      patch.closed_at = targetStatus === 'done' ? new Date().toISOString() : null;
+      patch.closed_at = closedAtFor(targetStatus);
     }
+
+    // Обновляем локально сразу: иначе карточка на долю секунды откатывается
+    // на старое место, пока не придёт ответ сервера/Realtime.
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...patch } : i));
+
     const { error } = await sb.from('items').update(patch).eq('id', itemId);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(error.message); reload(current); return; }
     reload(current);
   };
 
@@ -222,12 +230,12 @@ export function Board() {
                          rounded-lg p-1 outline-none resize-none"
             />
           ) : (
-            <span
-              onClick={() => setEditingDescription(true)}
+            <Editable
+              onEdit={() => setEditingDescription(true)}
               className="text-sm text-(--color-muted) cursor-text"
             >
               {currentProject.description || 'описание — клик, чтобы добавить'}
-            </span>
+            </Editable>
           )
         )}
         {err && <span className="text-sm text-(--color-danger-ink)">{err}</span>}
@@ -331,14 +339,11 @@ function Column(
 
   // «Готово» — единственная колонка, которая обрезается: открытые задачи
   // не должны прятаться, а закрытых со временем становится много.
-  // Сортируем по дате закрытия — «последние несколько» значит недавно
-  // завершённые, а не недавно созданные. Группировка по эпику — уже
-  // поверх этого обрезанного списка, кап не меняется.
+  // items уже отфильтрованы до status===col.key && !archived_at в Board —
+  // recentDone() лишь досортирует по дате закрытия. Группировка по эпику —
+  // уже поверх этого обрезанного списка, кап не меняется.
   const capped = col.key === 'done';
-  const full = capped
-    ? [...items].sort(
-        (a, b) => (b.closed_at ?? '').localeCompare(a.closed_at ?? ''))
-    : items;
+  const full = capped ? recentDone(items) : items;
   const list = capped ? full.slice(0, DONE_SHOWN) : full;
   const hiddenDone = capped ? full.length - list.length : 0;
 
@@ -350,8 +355,12 @@ function Column(
   const pinnedEmpty = col.key === 'backlog' ? emptyEpics(epics, allItems) : [];
 
   return (
-    <section ref={setNodeRef}>
-      <h2 className="text-xs text-(--color-muted) mb-2 px-1">
+    <section
+      ref={setNodeRef}
+      className="rounded-lg border border-(--color-line) p-2"
+    >
+      <h2 className="text-xs text-(--color-muted) mb-2 px-1
+                     sticky top-0 bg-(--color-ground) py-1 z-10">
         {col.label} {full.length > 0 && full.length}
       </h2>
       <SortableContext
@@ -448,10 +457,7 @@ function Card(
   };
 
   const move = async (status: Item['status']) => {
-    const { error } = await sb.from('items').update({
-      status,
-      closed_at: status === 'done' ? new Date().toISOString() : null,
-    }).eq('id', item.id);
+    const { error } = await setStatus(item.id, status);
     // Молчаливый отказ выглядел бы как «карточка сама вернулась назад».
     if (error) { onError(error.message); return; }
     onChanged();

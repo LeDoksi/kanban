@@ -13,6 +13,7 @@
   --color-wait-ink: #854f0b;
   --color-danger: #faecea;
   --color-danger-ink: #a32d2d;
+  --color-overlay: rgb(0 0 0 / 0.4);
 }
 
 @media (prefers-color-scheme: dark) {

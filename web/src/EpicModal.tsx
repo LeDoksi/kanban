@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { sb } from './supabase';
 import type { Item, Epic } from './supabase';
 import { epicProgress } from './epics';
+import { Editable } from './Editable';
 
 export function EpicModal(
   { epicId, onClose, onOpenItem }: {
@@ -73,7 +74,7 @@ export function EpicModal(
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-(--color-overlay) flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <div
@@ -94,12 +95,13 @@ export function EpicModal(
                            border-b border-(--color-line) outline-none"
               />
             ) : (
-              <h1
-                onClick={() => setEditingTitle(true)}
+              <Editable
+                as="h1"
+                onEdit={() => setEditingTitle(true)}
                 className="text-lg font-medium cursor-text"
               >
                 {epic?.title}
-              </h1>
+              </Editable>
             )}
           </div>
           <button
@@ -126,12 +128,13 @@ export function EpicModal(
                        border border-(--color-line) outline-none resize-none"
           />
         ) : (
-          <p
-            onClick={() => setEditingGoal(true)}
+          <Editable
+            as="p"
+            onEdit={() => setEditingGoal(true)}
             className="text-sm text-(--color-muted) mb-3 cursor-text min-h-[1.3em]"
           >
             {epic?.goal || 'цель — клик, чтобы добавить'}
-          </p>
+          </Editable>
         )}
 
         <div className="flex items-center gap-3 mb-5 text-sm text-(--color-muted)">

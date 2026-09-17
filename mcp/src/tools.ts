@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { sb, resolveProject } from './db.ts';
-import type { Item, Epic, Comment } from './db.ts';
+import type { Item, Epic, Comment, Project } from './db.ts';
 import { formatBoard, formatItem } from './format.ts';
 import { parsePlan } from './parse-plan.ts';
 
@@ -34,6 +34,16 @@ export function registerTools(server: McpServer) {
   }, async ({ project, epic }) => {
     const p = await resolveProject(project);
 
+    // Эпик проверяется до счёта задач: несуществующий id иначе дал бы
+    // тот же пустой (0/0), что и реальный пустой эпик, — неразличимо.
+    let head = null as Epic | null;
+    if (epic) {
+      const r = await sb.from('epics').select('*').eq('id', epic).maybeSingle();
+      if (r.error) throw new Error(r.error.message);
+      if (!r.data) throw new Error(`Эпик ${epic} не найден`);
+      head = r.data as Epic;
+    }
+
     // Архивные тянем тоже: они не показываются в списке (formatBoard
     // отфильтрует), но считаются в «сделано из всего» — иначе счётчик
     // едет назад, когда готовые карточки убирают из колонки.
@@ -43,10 +53,22 @@ export function registerTools(server: McpServer) {
     if (error) throw new Error(error.message);
 
     const items = (data ?? []) as Item[];
-    let head = null as Epic | null;
-    if (epic) {
-      const r = await sb.from('epics').select('*').eq('id', epic).single();
-      head = (r.data ?? null) as Epic | null;
+
+    // Список эпиков — только когда доска не сужена до одного из них:
+    // иначе это единственный способ узнать ID эпика без get() задачи.
+    let epics: { id: string; title: string; done: number; total: number }[] | undefined;
+    if (!epic) {
+      const er = await sb.from('epics').select('*')
+        .eq('project_id', p.id).neq('status', 'archived');
+      if (er.error) throw new Error(er.error.message);
+      epics = (er.data as Epic[] ?? []).map(e => {
+        const own = items.filter(i => i.epic_id === e.id);
+        return {
+          id: e.id, title: e.title,
+          done: own.filter(i => i.status === 'done').length,
+          total: own.length,
+        };
+      });
     }
 
     return text(formatBoard(items, {
@@ -55,6 +77,7 @@ export function registerTools(server: McpServer) {
       epic: head ? { id: head.id, title: head.title } : null,
       done: items.filter(i => i.status === 'done').length,
       total: items.length,
+      epics,
     }));
   });
 
@@ -327,15 +350,21 @@ export function registerTools(server: McpServer) {
       description: z.string().optional(),
     },
   }, async ({ id, name, prefix, description }) => {
-    const existing = await sb.from('projects').select('id').eq('id', id).maybeSingle();
+    const existing = await sb.from('projects').select('*').eq('id', id).maybeSingle();
     if (existing.error) throw new Error(existing.error.message);
 
     if (existing.data) {
+      const cur = existing.data as Project;
       const patch: Record<string, unknown> = {};
       if (name !== undefined) patch.name = name;
       if (prefix !== undefined) patch.prefix = prefix;
       if (description !== undefined) patch.description = description;
-      if (!Object.keys(patch).length) return text(`${id}: нечего менять`);
+      // Без полей на изменение — это чтение: без него узнать текущие
+      // name/prefix/description можно было только через SQL мимо MCP.
+      if (!Object.keys(patch).length) {
+        return text(`${cur.id} · ${cur.name} [${cur.prefix}]`
+          + (cur.description ? ` — ${cur.description}` : ''));
+      }
       const up = await sb.from('projects').update(patch).eq('id', id);
       if (up.error) throw new Error(up.error.message);
       return text(`${id} обновлён`);

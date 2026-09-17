@@ -29,3 +29,15 @@ export type Epic = {
 export type Project = {
   id: string; name: string; prefix: string; description: string | null;
 };
+
+// status меняется → closed_at ставится/сбрасывается: было продублировано
+// в drag, свайпе/селекте карточки и TaskModal. closedAtFor() отдельно —
+// drag комбинирует его с position в одном update и не может звать
+// setStatus() напрямую.
+export const closedAtFor = (status: Item['status']): string | null =>
+  status === 'done' ? new Date().toISOString() : null;
+
+export const setStatus = (id: string, status: Item['status']) =>
+  sb.from('items')
+    .update({ status, closed_at: closedAtFor(status) })
+    .eq('id', id);

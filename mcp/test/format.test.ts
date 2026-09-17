@@ -46,13 +46,12 @@ test('без описания шапка как раньше, без лишне�
   assert.equal(out.split('\n')[0], 'kanban (0/0)');
 });
 
-test('префикс проекта в строках не печатается', () => {
+test('строка печатает полный id с префиксом, а не голый seq', () => {
   const out = formatBoard(
     [item({ id: 'KAN-8', seq: 8, title: 'Заметки', status: 'doing' })],
     { project: 'kanban', done: 0, total: 1 },
   );
-  assert.match(out, /^ ?8 /m);
-  assert.doesNotMatch(out, /KAN-8/);
+  assert.match(out, /^KAN-8 /m);
 });
 
 test('задача в работе помечена и показывает прогресс чеклиста', () => {
@@ -73,10 +72,10 @@ test('задача в работе помечена и показывает пр
 
 test('ожидание владельца помечено восклицательным знаком', () => {
   const out = formatBoard(
-    [item({ seq: 12, title: 'Включить Firestore', status: 'waiting' })],
+    [item({ id: 'KAN-12', seq: 12, title: 'Включить Firestore', status: 'waiting' })],
     { project: 'kanban', done: 0, total: 1 },
   );
-  assert.match(out, /12 ! Включить Firestore/);
+  assert.match(out, /KAN-12 ! Включить Firestore/);
 });
 
 test('тип печатается словом только когда это не обычная задача', () => {
@@ -102,6 +101,25 @@ test('закрытые задачи в список не попадают', () =
   );
   assert.doesNotMatch(out, /Старая/);
   assert.match(out, /Живая/);
+});
+
+test('список эпиков печатается отдельной строкой с ID и прогрессом', () => {
+  const out = formatBoard([], {
+    project: 'kanban', done: 0, total: 0,
+    epics: [
+      { id: 'KAN-E1', title: 'Realtime', done: 5, total: 6 },
+      { id: 'KAN-E2', title: 'UX-фидбек', done: 0, total: 3 },
+    ],
+  });
+  assert.equal(
+    out.split('\n')[1],
+    'эпики: KAN-E1 Realtime (5/6), KAN-E2 UX-фидбек (0/3)',
+  );
+});
+
+test('без эпиков строка эпиков не печатается', () => {
+  const out = formatBoard([], { project: 'kanban', done: 0, total: 0 });
+  assert.doesNotMatch(out, /эпики:/);
 });
 
 test('пустая доска говорит об этом словом, а не пустой строкой', () => {

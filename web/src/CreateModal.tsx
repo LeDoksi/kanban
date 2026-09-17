@@ -95,7 +95,7 @@ export function CreateModal(
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-(--color-overlay) flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <div

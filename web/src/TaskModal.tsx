@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { sb } from './supabase';
+import { sb, setStatus } from './supabase';
 import type { Item, Comment, Epic } from './supabase';
 import { selectableEpics } from './epics';
+import { Editable } from './Editable';
 
 const STATUS_LABEL: Record<Item['status'], string> = {
   backlog: 'Backlog', doing: 'В работе',
@@ -64,9 +65,7 @@ export function TaskModal(
   };
 
   const move = async (status: Item['status']) => {
-    const { error } = await sb.from('items').update({
-      status, closed_at: status === 'done' ? new Date().toISOString() : null,
-    }).eq('id', item.id);
+    const { error } = await setStatus(item.id, status);
     if (error) { setErr(error.message); return; }
     onChanged();
   };
@@ -139,7 +138,7 @@ export function TaskModal(
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-(--color-overlay) flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <div
@@ -163,12 +162,13 @@ export function TaskModal(
                            border-b border-(--color-line) outline-none"
               />
             ) : (
-              <h2
-                onClick={() => setEditingTitle(true)}
+              <Editable
+                as="h2"
+                onEdit={() => setEditingTitle(true)}
                 className="text-base font-medium cursor-text"
               >
                 {item.title}
-              </h2>
+              </Editable>
             )}
           </div>
           <button
@@ -249,14 +249,15 @@ export function TaskModal(
                        border border-(--color-line) outline-none resize-none"
           />
         ) : (
-          <p
-            onClick={() => setEditingBody(true)}
+          <Editable
+            as="p"
+            onEdit={() => setEditingBody(true)}
             className="text-sm whitespace-pre-wrap mb-4 cursor-text min-h-[1.5em]"
           >
             {item.body || (
               <span className="text-(--color-muted)">описание — клик, чтобы добавить</span>
             )}
-          </p>
+          </Editable>
         )}
 
         {item.blocks.length > 0 && (

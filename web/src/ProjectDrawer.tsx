@@ -43,7 +43,7 @@ export function ProjectDrawer(
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-(--color-overlay) z-50" onClick={onClose}>
       <div
         className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-(--color-ground)
                    overflow-y-auto p-5"
