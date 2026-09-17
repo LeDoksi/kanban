@@ -16,12 +16,12 @@ import { Editable } from './Editable';
 import { between } from './position';
 import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
 import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
-import { swipeTarget } from './swipe';
+import { swipeTarget, swipePreview, SWIPE_THRESHOLD } from './swipe';
 import type { Epic } from './supabase';
 
 const COLUMNS = [
-  { key: 'backlog', label: 'Backlog' },
   { key: 'hold',    label: 'Hold' },
+  { key: 'backlog', label: 'Backlog' },
   { key: 'doing',   label: 'В работе' },
   { key: 'waiting', label: 'Нужно от тебя' },
   { key: 'done',    label: 'Готово' },
@@ -539,9 +539,12 @@ function Card(
     setDragX(0);
   };
 
-  // Куда денёт свайп, если отпустить прямо сейчас — без этого не видно,
-  // что произойдёт, пока карточка уже не улетела в другой статус.
+  // target — с порогом, решает, что случится на onTouchEnd. preview —
+  // без порога, только для панели: та открывается с первого пикселя
+  // свайпа, а не выстреливает внезапно после срабатывания.
   const target = swipeTarget(item.status, dragX);
+  const preview = swipePreview(item.status, dragX);
+  const committed = Math.abs(dragX) > SWIPE_THRESHOLD;
 
   const move = async (status: Item['status']) => {
     const { error } = await setStatus(item.id, status);
@@ -551,59 +554,71 @@ function Card(
   };
 
   return (
-    <article
-      ref={setNodeRef}
-      role="button"
-      tabIndex={0}
-      onKeyDown={e => {
-        if (e.target !== e.currentTarget) return;
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); }
-      }}
-      style={{
-        ...style,
-        transform: `${style.transform ?? ''} translateX(${dragX}px)`.trim(),
-      }}
-      {...listeners}
-      onClick={() => onOpen(item)}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      className={`relative rounded-lg p-2.5 text-sm cursor-grab touch-pan-y ${
-        waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
-      } ${target ? 'ring-2 ring-(--color-muted)' : ''}`}
-    >
-      {target && (
-        <span
-          className={`absolute top-1/2 -translate-y-1/2 text-[11px] px-1.5 py-0.5
-                      rounded bg-(--color-ink) text-(--color-ground) whitespace-nowrap
-                      ${dragX > 0 ? 'right-2' : 'left-2'}`}
-        >
-          → {COLUMNS.find(c => c.key === target)?.label}
-        </span>
-      )}
-      <div className="flex items-center gap-1.5 mb-1">
-        <span
-          className={`text-[11px] font-mono ${
-            waiting ? 'text-(--color-wait-ink)' : 'text-(--color-muted)'
+    // Панель со следующим статусом лежит позади карточки и открывается
+    // по мере сдвига — раньше подсказка была приклеена к самой карточке
+    // и уезжала с ней к краю экрана, толком не успевая показаться.
+    <div className="relative">
+      {preview && (
+        <div
+          aria-hidden
+          className={`absolute inset-0 rounded-lg flex items-center gap-1.5 px-3
+                     text-sm font-medium overflow-hidden ${
+            dragX > 0 ? 'justify-start' : 'justify-end'
+          } ${
+            committed
+              ? 'bg-(--color-ink) text-(--color-ground)'
+              : 'bg-(--color-panel) text-(--color-muted)'
           }`}
         >
-          {item.seq}
-        </span>
-        {item.type !== 'task' && (
-          <span className="text-[10px] px-1.5 py-px rounded
-                           bg-(--color-danger) text-(--color-danger-ink)">
-            {item.type === 'bug' ? 'баг' : 'долг'}
-          </span>
-        )}
-      </div>
-
-      <p className={waiting ? 'text-(--color-wait-ink)' : ''}>{item.title}</p>
-
-      {item.checklist.length > 0 && (
-        <p className="text-[11px] text-(--color-muted) mt-1.5">
-          {done}/{item.checklist.length}
-        </p>
+          <span>{dragX > 0 ? '→' : '←'}</span>
+          <span>{COLUMNS.find(c => c.key === preview)?.label}</span>
+        </div>
       )}
-    </article>
+      <article
+        ref={setNodeRef}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); }
+        }}
+        style={{
+          ...style,
+          transform: `${style.transform ?? ''} translateX(${dragX}px)`.trim(),
+        }}
+        {...listeners}
+        onClick={() => onOpen(item)}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        className={`rounded-lg p-2.5 text-sm cursor-grab touch-pan-y ${
+          waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
+        }`}
+      >
+        <div className="flex items-center gap-1.5 mb-1">
+          <span
+            className={`text-[11px] font-mono ${
+              waiting ? 'text-(--color-wait-ink)' : 'text-(--color-muted)'
+            }`}
+          >
+            {item.seq}
+          </span>
+          {item.type !== 'task' && (
+            <span className="text-[10px] px-1.5 py-px rounded
+                             bg-(--color-danger) text-(--color-danger-ink)">
+              {item.type === 'bug' ? 'баг' : 'долг'}
+            </span>
+          )}
+        </div>
+
+        <p className={waiting ? 'text-(--color-wait-ink)' : ''}>{item.title}</p>
+
+        {item.checklist.length > 0 && (
+          <p className="text-[11px] text-(--color-muted) mt-1.5">
+            {done}/{item.checklist.length}
+          </p>
+        )}
+      </article>
+    </div>
   );
 }
