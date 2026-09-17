@@ -8,7 +8,7 @@ import { CreateModal } from './CreateModal';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 import { EpicModal } from './EpicModal';
-import { ProjectDrawer } from './ProjectDrawer';
+import { ProjectDrawer, type ProjectRow } from './ProjectDrawer';
 import { Editable } from './Editable';
 import { between } from './position';
 import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
@@ -34,6 +34,7 @@ export function Board() {
   const [showCreate, setShowCreate] = useState(false);
   const [viewEpic, setViewEpic] = useState<string | null>(null);
   const [showProjects, setShowProjects] = useState(false);
+  const [projectRows, setProjectRows] = useState<ProjectRow[]>([]);
 
   // Ошибка держится на экране гарантированные несколько секунд, а не до
   // ближайшего фонового reload() — иначе Realtime мог погасить её раньше,
@@ -66,14 +67,31 @@ export function Board() {
     setEpics((data ?? []) as Epic[]);
   };
 
+  // Сводка для шторки проектов (счётчики total/done/waiting) грузится
+  // здесь же, а не при каждом открытии шторки — она не настолько горяча,
+  // чтобы платить полным перезапросом за каждый клик на кнопку «Проекты».
   const reloadProjects = async (keepCurrent = true) => {
-    const { data, error } = await sb.from('projects').select('*')
-      .is('archived_at', null).order('position');
+    const [{ data, error }, { data: allItems, error: iErr }] = await Promise.all([
+      sb.from('projects').select('*').is('archived_at', null).order('position'),
+      sb.from('items').select('project_id, status, archived_at'),
+    ]);
     if (error) { setErr(error.message); return; }
     const ps = (data ?? []) as Project[];
     setProjects(ps);
     if (!keepCurrent && ps.length) setCurrent(ps[0].id);
     if (keepCurrent && !current && ps.length) setCurrent(ps[0].id);
+
+    if (iErr) { setErr(iErr.message); return; }
+    const all = allItems ?? [];
+    setProjectRows(ps.map(project => {
+      const mine = all.filter(i => i.project_id === project.id);
+      return {
+        project,
+        total: mine.length,
+        done: mine.filter(i => i.status === 'done').length,
+        waiting: mine.filter(i => i.status === 'waiting' && !i.archived_at).length,
+      };
+    }));
   };
 
   useEffect(() => { reloadProjects(false); }, []);
@@ -335,6 +353,7 @@ export function Board() {
       {showProjects && (
         <ProjectDrawer
           current={current}
+          rows={projectRows}
           onSelect={id => { setCurrent(id); reloadProjects(); }}
           onClose={() => setShowProjects(false)}
         />

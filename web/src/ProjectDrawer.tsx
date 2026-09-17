@@ -1,40 +1,15 @@
-import { useEffect, useState } from 'react';
-import { sb } from './supabase';
+import { useEffect } from 'react';
 import type { Project } from './supabase';
 import { NewProject } from './NewProject';
 
-type Row = { project: Project; total: number; done: number; waiting: number };
+export type ProjectRow = { project: Project; total: number; done: number; waiting: number };
 
 export function ProjectDrawer(
-  { current, onSelect, onClose }: { current: string; onSelect: (id: string) => void; onClose: () => void },
+  { current, rows, onSelect, onClose }: {
+    current: string; rows: ProjectRow[];
+    onSelect: (id: string) => void; onClose: () => void;
+  },
 ) {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [err, setErr] = useState('');
-
-  // Только нужные колонки, не select('*') по всем задачам всех проектов —
-  // старый экран «Все проекты» заметно тормозил именно на этом запросе.
-  const load = async () => {
-    const [{ data: projects, error: pErr }, { data: items, error: iErr }] = await Promise.all([
-      sb.from('projects').select('*').is('archived_at', null).order('position'),
-      sb.from('items').select('project_id, status, archived_at'),
-    ]);
-    if (pErr) { setErr(pErr.message); return; }
-    if (iErr) { setErr(iErr.message); return; }
-
-    const all = items ?? [];
-    setRows((projects ?? []).map((project: Project) => {
-      const mine = all.filter(i => i.project_id === project.id);
-      return {
-        project,
-        total: mine.length,
-        done: mine.filter(i => i.status === 'done').length,
-        waiting: mine.filter(i => i.status === 'waiting' && !i.archived_at).length,
-      };
-    }));
-  };
-
-  useEffect(() => { load(); }, []);
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -58,8 +33,6 @@ export function ProjectDrawer(
             ×
           </button>
         </div>
-
-        {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
 
         <NewProject onCreated={id => { onSelect(id); onClose(); }} />
 
