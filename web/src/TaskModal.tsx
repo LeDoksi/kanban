@@ -27,6 +27,7 @@ export function TaskModal(
   const [editingBody, setEditingBody] = useState(false);
   const [titleDraft, setTitleDraft] = useState(item.title);
   const [bodyDraft, setBodyDraft] = useState(item.body ?? '');
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     sb.from('comments').select('*')
@@ -107,9 +108,13 @@ export function TaskModal(
 
   const sendComment = async () => {
     const text = newComment.trim();
-    if (!text) return;
+    // sending гонит от тройного клика/Enter до отклика сети: без него
+    // каждый клик видит ещё не очищенный newComment и шлёт свою вставку.
+    if (!text || sending) return;
+    setSending(true);
     const { error } = await sb.from('comments')
       .insert({ item_id: item.id, author: 'me', body: text });
+    setSending(false);
     if (error) { setErr(error.message); return; }
     setNewComment('');
     const { data, error: readErr } = await sb.from('comments').select('*')
@@ -302,12 +307,13 @@ export function TaskModal(
               onChange={e => setNewComment(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') sendComment(); }}
               placeholder="комментарий"
+              disabled={sending}
               className="flex-1 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
                          border border-(--color-line) outline-none"
             />
             <button
               onClick={sendComment}
-              disabled={!newComment.trim()}
+              disabled={!newComment.trim() || sending}
               className="h-8 px-3 rounded-lg bg-(--color-ink) text-(--color-ground)
                          text-sm disabled:opacity-40"
             >
