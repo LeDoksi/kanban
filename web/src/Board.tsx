@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { DndContext, type DragEndEvent, MouseSensor, useSensor, useSensors } from '@dnd-kit/core';
+import {
+  DndContext, DragOverlay, type DragEndEvent,
+  MouseSensor, useSensor, useSensors,
+} from '@dnd-kit/core';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { sb, setStatus, closedAtFor } from './supabase';
@@ -36,6 +39,10 @@ export function Board() {
   const [viewEpic, setViewEpic] = useState<string | null>(null);
   const [showProjects, setShowProjects] = useState(false);
   const [projectRows, setProjectRows] = useState<ProjectRow[]>([]);
+  // Плывущий превью-клон под курсором: у каждой колонки свой SortableContext,
+  // и без DragOverlay dnd-kit не рисует ничего под курсором ни над пустым
+  // местом, ни над чужой колонкой — только над существующими карточками.
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // Ошибка держится на экране гарантированные несколько секунд, а не до
   // ближайшего фонового reload() — иначе Realtime мог погасить её раньше,
@@ -169,6 +176,7 @@ export function Board() {
   // архив показывает всё остальное: и настоящие архивные карточки, и
   // готовые сверх видимых DONE_SHOWN.
   const doneShownIds = shownDoneIds(items);
+  const activeItem = activeId ? items.find(i => i.id === activeId) ?? null : null;
   const archivedCount = items.filter(i => i.archived_at).length;
   const archiveItems = items
     .filter(i => i.archived_at || (i.status === 'done' && !doneShownIds.has(i.id)))
@@ -186,6 +194,7 @@ export function Board() {
   }));
 
   const onDragEnd = async (e: DragEndEvent) => {
+    setActiveId(null);
     const itemId = e.active.id as string;
     const overId = e.over?.id as string | undefined;
     if (!overId) return;
@@ -288,8 +297,13 @@ export function Board() {
         </button>
       </header>
 
-      {/* Телефон — одна вертикаль, десктоп — четыре колонки. */}
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      {/* Телефон — одна вертикаль, десктоп — пять колонок. */}
+      <DndContext
+        sensors={sensors}
+        onDragStart={e => setActiveId(e.active.id as string)}
+        onDragEnd={onDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
         <div className="grid gap-3 md:grid-cols-5">
           {COLUMNS.map(col => (
             <Column
@@ -307,6 +321,9 @@ export function Board() {
             />
           ))}
         </div>
+        <DragOverlay>
+          {activeItem && <CardPreview item={activeItem} />}
+        </DragOverlay>
       </DndContext>
 
       {openItem && (
@@ -447,6 +464,37 @@ function Column(
         </button>
       )}
     </section>
+  );
+}
+
+// Плывущий клон под курсором во время drag — не подписан на useSortable
+// (это делает DragOverlay сам), поэтому просто статичная разметка без
+// обработчиков.
+function CardPreview({ item }: { item: Item }) {
+  const waiting = item.status === 'waiting';
+  return (
+    <article
+      className={`rounded-lg p-2.5 text-sm shadow-lg rotate-1 ${
+        waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
+      }`}
+    >
+      <div className="flex items-center gap-1.5 mb-1">
+        <span
+          className={`text-[11px] font-mono ${
+            waiting ? 'text-(--color-wait-ink)' : 'text-(--color-muted)'
+          }`}
+        >
+          {item.seq}
+        </span>
+        {item.type !== 'task' && (
+          <span className="text-[10px] px-1.5 py-px rounded
+                           bg-(--color-danger) text-(--color-danger-ink)">
+            {item.type === 'bug' ? 'баг' : 'долг'}
+          </span>
+        )}
+      </div>
+      <p className={waiting ? 'text-(--color-wait-ink)' : ''}>{item.title}</p>
+    </article>
   );
 }
 
