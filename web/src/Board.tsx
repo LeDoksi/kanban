@@ -601,22 +601,6 @@ function Card(
           {done}/{item.checklist.length}
         </p>
       )}
-
-      <select
-        value={item.status}
-        onChange={e => move(e.target.value as Item['status'])}
-        onClick={e => e.stopPropagation()}
-        aria-label={`Статус задачи ${item.title}`}
-        className="mt-2 w-full h-7 px-1 rounded text-[11px]
-                   bg-transparent border border-(--color-line)
-                   text-(--color-muted)"
-      >
-        <option value="backlog">Backlog</option>
-        <option value="hold">Hold</option>
-        <option value="doing">В работе</option>
-        <option value="waiting">Нужно от тебя</option>
-        <option value="done">Готово</option>
-      </select>
     </article>
   );
 }
