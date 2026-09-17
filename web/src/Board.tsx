@@ -18,6 +18,7 @@ import type { Epic } from './supabase';
 
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog' },
+  { key: 'hold',    label: 'Hold' },
   { key: 'doing',   label: 'В работе' },
   { key: 'waiting', label: 'Нужно от тебя' },
   { key: 'done',    label: 'Готово' },
@@ -289,7 +290,7 @@ export function Board() {
 
       {/* Телефон — одна вертикаль, десктоп — четыре колонки. */}
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-5">
           {COLUMNS.map(col => (
             <Column
               key={col.key}
@@ -563,6 +564,7 @@ function Card(
                    text-(--color-muted)"
       >
         <option value="backlog">Backlog</option>
+        <option value="hold">Hold</option>
         <option value="doing">В работе</option>
         <option value="waiting">Нужно от тебя</option>
         <option value="done">Готово</option>

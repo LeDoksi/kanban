@@ -8,12 +8,12 @@ test('ниже порога — нет цели', () => {
 });
 
 test('вправо — следующий статус', () => {
-  assert.equal(swipeTarget('backlog', SWIPE_THRESHOLD + 1), 'doing');
+  assert.equal(swipeTarget('backlog', SWIPE_THRESHOLD + 1), 'hold');
   assert.equal(swipeTarget('doing', SWIPE_THRESHOLD + 1), 'waiting');
 });
 
 test('влево — предыдущий статус', () => {
-  assert.equal(swipeTarget('doing', -(SWIPE_THRESHOLD + 1)), 'backlog');
+  assert.equal(swipeTarget('doing', -(SWIPE_THRESHOLD + 1)), 'hold');
   assert.equal(swipeTarget('done', -(SWIPE_THRESHOLD + 1)), 'waiting');
 });
 

@@ -1,6 +1,6 @@
 import type { Item } from './supabase';
 
-export const STATUS_ORDER: Item['status'][] = ['backlog', 'doing', 'waiting', 'done'];
+export const STATUS_ORDER: Item['status'][] = ['backlog', 'hold', 'doing', 'waiting', 'done'];
 export const SWIPE_THRESHOLD = 60;
 
 // Куда денёт свайп, если отпустить прямо сейчас — null, пока порог не

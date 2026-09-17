@@ -29,7 +29,7 @@ export type Check = { text: string; done: boolean };
 export type Item = {
   id: string; seq: number; project_id: string; epic_id: string | null;
   type: 'task' | 'bug' | 'chore'; title: string; body: string | null;
-  status: 'backlog' | 'doing' | 'waiting' | 'done';
+  status: 'backlog' | 'hold' | 'doing' | 'waiting' | 'done';
   checklist: Check[]; blocks: string[]; position: number;
   created_by: 'me' | 'claude'; closed_at: string | null;
   archived_at: string | null;

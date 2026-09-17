@@ -17,7 +17,7 @@ export type BoardHead = {
 };
 
 const MARK: Record<Item['status'], string> = {
-  doing: '▸', waiting: '!', backlog: ' ', done: ' ',
+  doing: '▸', waiting: '!', backlog: ' ', hold: '~', done: ' ',
 };
 
 const progress = (c: Item['checklist']) =>
@@ -47,7 +47,7 @@ export function formatBoard(items: Item[], head: BoardHead): string {
     return lines.join('\n');
   }
 
-  const order = { waiting: 0, doing: 1, backlog: 2, done: 3 };
+  const order = { waiting: 0, doing: 1, backlog: 2, hold: 3, done: 4 };
   open.sort((a, b) =>
     order[a.status] - order[b.status] || a.position - b.position);
 

@@ -12,7 +12,7 @@ import { parsePlan } from './parse-plan.ts';
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
 
-const STATUS = z.enum(['backlog', 'doing', 'waiting', 'done']);
+const STATUS = z.enum(['backlog', 'hold', 'doing', 'waiting', 'done']);
 const TYPE = z.enum(['task', 'bug', 'chore']);
 
 async function nextSeq(project: string, kind: 'item' | 'epic') {

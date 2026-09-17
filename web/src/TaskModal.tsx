@@ -5,7 +5,7 @@ import { selectableEpics } from './epics';
 import { Editable } from './Editable';
 
 const STATUS_LABEL: Record<Item['status'], string> = {
-  backlog: 'Backlog', doing: 'В работе',
+  backlog: 'Backlog', hold: 'Hold', doing: 'В работе',
   waiting: 'Нужно от тебя', done: 'Готово',
 };
 
