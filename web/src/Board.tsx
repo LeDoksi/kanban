@@ -111,21 +111,40 @@ export function Board() {
     // «обновить» и без опроса по таймеру. epics тоже в publication
     // (план №2, Task 10) — эпик, созданный или переименованный агентом,
     // тоже появляется без перезагрузки.
+    //
+    // Debounce: удаление эпика с N задачами снимает epic_id у каждой
+    // через ON DELETE SET NULL — это N отдельных событий на items почти
+    // одновременно, и без debounce каждое тянуло бы свой полный reload().
+    let itemsTimer: ReturnType<typeof setTimeout> | undefined;
+    let epicsTimer: ReturnType<typeof setTimeout> | undefined;
+    const debouncedReload = () => {
+      clearTimeout(itemsTimer);
+      itemsTimer = setTimeout(() => reload(current), 200);
+    };
+    const debouncedReloadEpics = () => {
+      clearTimeout(epicsTimer);
+      epicsTimer = setTimeout(() => reloadEpics(current), 200);
+    };
+
     const channel = sb
       .channel(`items-${current}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'items', filter: `project_id=eq.${current}` },
-        () => reload(current),
+        debouncedReload,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'epics', filter: `project_id=eq.${current}` },
-        () => reloadEpics(current),
+        debouncedReloadEpics,
       )
       .subscribe();
 
-    return () => { sb.removeChannel(channel); };
+    return () => {
+      clearTimeout(itemsTimer);
+      clearTimeout(epicsTimer);
+      sb.removeChannel(channel);
+    };
   }, [current]);
 
   // То же множество «показанных в Готово», что и в рендере колонок —
@@ -303,7 +322,6 @@ export function Board() {
           epics={epics}
           items={items}
           onClose={() => setShowCreate(false)}
-          onCreated={() => { reload(current); reloadEpics(current); }}
         />
       )}
 

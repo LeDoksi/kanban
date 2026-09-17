@@ -5,9 +5,9 @@ import { guessType, stripPrefix } from './guess';
 import { selectableEpics } from './epics';
 
 export function CreateModal(
-  { project, epics, items, onClose, onCreated }: {
+  { project, epics, items, onClose }: {
     project: string; epics: Epic[]; items: Item[];
-    onClose: () => void; onCreated: () => void;
+    onClose: () => void;
   },
 ) {
   const [kind, setKind] = useState<'task' | 'epic'>('task');
@@ -41,12 +41,13 @@ export function CreateModal(
     if (!clean) { setError('Напиши, что надо сделать'); return; }
     setBusy(true);
 
-    const { data: seqData, error: seqErr } = await sb
-      .rpc('next_seq', { p_project: project, p_kind: 'item' });
+    // Независимые запросы — параллельно, а не друг за другом: номер и
+    // префикс проекта не зависят один от другого.
+    const [{ data: seqData, error: seqErr }, { data: p, error: pErr }] = await Promise.all([
+      sb.rpc('next_seq', { p_project: project, p_kind: 'item' }),
+      sb.from('projects').select('prefix').eq('id', project).single(),
+    ]);
     if (seqErr) { setError(seqErr.message); setBusy(false); return; }
-
-    const { data: p, error: pErr } = await sb.from('projects')
-      .select('prefix').eq('id', project).single();
     if (pErr || !p) { setError(pErr?.message ?? 'Проект не найден'); setBusy(false); return; }
 
     const { error } = await sb.from('items').insert({
@@ -62,7 +63,8 @@ export function CreateModal(
     });
     setBusy(false);
     if (error) { setError(error.message); return; }
-    onCreated();
+    // Доска обновится сама через Realtime — свой reload() тут был бы
+    // вторым полным запросом сразу вслед за тем же, что и так придёт.
     onClose();
   };
 
@@ -71,12 +73,11 @@ export function CreateModal(
     if (!epicTitle.trim()) { setError('Напиши заголовок эпика'); return; }
     setBusy(true);
 
-    const { data: seq, error: seqErr } = await sb
-      .rpc('next_seq', { p_project: project, p_kind: 'epic' });
+    const [{ data: seq, error: seqErr }, { data: p, error: pErr }] = await Promise.all([
+      sb.rpc('next_seq', { p_project: project, p_kind: 'epic' }),
+      sb.from('projects').select('prefix').eq('id', project).single(),
+    ]);
     if (seqErr) { setError(seqErr.message); setBusy(false); return; }
-
-    const { data: p, error: pErr } = await sb.from('projects')
-      .select('prefix').eq('id', project).single();
     if (pErr || !p) { setError(pErr?.message ?? 'Проект не найден'); setBusy(false); return; }
 
     const id = `${p.prefix}-E${seq}`;
@@ -87,7 +88,6 @@ export function CreateModal(
     });
     setBusy(false);
     if (error) { setError(error.message); return; }
-    onCreated();
     onClose();
   };
 

@@ -14,12 +14,11 @@ export function ProjectDrawer(
   // Только нужные колонки, не select('*') по всем задачам всех проектов —
   // старый экран «Все проекты» заметно тормозил именно на этом запросе.
   const load = async () => {
-    const { data: projects, error: pErr } = await sb.from('projects')
-      .select('*').is('archived_at', null).order('position');
+    const [{ data: projects, error: pErr }, { data: items, error: iErr }] = await Promise.all([
+      sb.from('projects').select('*').is('archived_at', null).order('position'),
+      sb.from('items').select('project_id, status, archived_at'),
+    ]);
     if (pErr) { setErr(pErr.message); return; }
-
-    const { data: items, error: iErr } = await sb.from('items')
-      .select('project_id, status, archived_at');
     if (iErr) { setErr(iErr.message); return; }
 
     const all = items ?? [];
