@@ -20,11 +20,6 @@
      Tailwind text-xs/text-sm/text-base. */
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
-
-  /* Переходный алиас на новую акцентную палитру — убрать вместе с
-     последним usage в Board.tsx (Task 7) и ProjectDrawer.tsx (Task 11). */
-  --color-wait: #f7e3cd;
-  --color-wait-ink: #9c5220;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -40,9 +35,6 @@
     --color-danger: #3a1f1f;
     --color-danger-ink: #f0a3a3;
     --color-overlay: rgb(0 0 0 / 0.6);
-
-    --color-wait: #3c2810;
-    --color-wait-ink: #e08a42;
   }
 }
 
