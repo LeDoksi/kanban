@@ -3,6 +3,8 @@ import { sb, setStatus } from './supabase';
 import type { Item, Comment, Epic } from './supabase';
 import { selectableEpics } from './epics';
 import { Editable } from './Editable';
+import { Sheet } from './ui/Sheet';
+import { Button } from './ui/Button';
 
 const STATUS_LABEL: Record<Item['status'], string> = {
   backlog: 'Backlog', hold: 'Hold', doing: 'В работе',
@@ -37,12 +39,6 @@ export function TaskModal(
         setComments((data ?? []) as Comment[]);
       });
   }, [item.id]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   // Синхронизировать черновики, если доска перечиталась (Realtime,
   // правка агентом) — иначе после чужой правки инлайн-редактор будет
@@ -108,8 +104,6 @@ export function TaskModal(
 
   const sendComment = async () => {
     const text = newComment.trim();
-    // sending гонит от тройного клика/Enter до отклика сети: без него
-    // каждый клик видит ещё не очищенный newComment и шлёт свою вставку.
     if (!text || sending) return;
     setSending(true);
     const { error } = await sb.from('comments')
@@ -142,202 +136,190 @@ export function TaskModal(
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-(--color-overlay) flex items-center justify-center p-4 z-50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-(--color-ground) rounded-lg max-w-lg w-full max-h-[85vh]
-                   overflow-y-auto p-5"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex-1">
-            <span className="text-[11px] font-mono text-(--color-muted)">
-              {item.id}
-            </span>
-            {editingTitle ? (
-              <input
-                autoFocus
-                value={titleDraft}
-                onChange={e => setTitleDraft(e.target.value)}
-                onBlur={saveTitle}
-                onKeyDown={e => { if (e.key === 'Enter') saveTitle(); }}
-                className="block w-full text-base font-medium bg-transparent
-                           border-b border-(--color-line) outline-none"
-              />
-            ) : (
-              <Editable
-                as="h2"
-                onEdit={() => setEditingTitle(true)}
-                className="text-base font-medium cursor-text"
-              >
-                {item.title}
-              </Editable>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Закрыть"
-            className="text-(--color-muted) text-lg leading-none"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {(Object.keys(STATUS_LABEL) as Item['status'][]).map(s => (
-            <button
-              key={s}
-              onClick={() => move(s)}
-              className={`text-[11px] px-2 py-1 rounded-full border ${
-                item.status === s
-                  ? 'border-(--color-muted)'
-                  : 'border-(--color-line) text-(--color-muted)'
-              }`}
-            >
-              {STATUS_LABEL[s]}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex gap-1.5 mb-4">
-          {(Object.keys(TYPE_LABEL) as Item['type'][]).map(t => (
-            <button
-              key={t}
-              onClick={() => setType(t)}
-              className={`text-[11px] px-2 py-1 rounded-full border ${
-                item.type === t
-                  ? 'border-(--color-muted)'
-                  : 'border-(--color-line) text-(--color-muted)'
-              }`}
-            >
-              {TYPE_LABEL[t]}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 mb-3">
-          <select
-            value={item.epic_id ?? ''}
-            onChange={e => setEpic(e.target.value)}
-            className="h-7 px-1.5 rounded text-[11px] bg-transparent
-                       border border-(--color-line) text-(--color-muted)"
-          >
-            <option value="">— без эпика —</option>
-            {selectableEpics(epics, allItems, item.epic_id).map(ep => (
-              <option key={ep.id} value={ep.id}>{ep.title}</option>
-            ))}
-          </select>
-          {item.epic_id && onOpenEpic && (
-            <button
-              onClick={() => onOpenEpic(item.epic_id!)}
-              className="text-xs text-(--color-muted) underline"
-            >
-              открыть эпик
-            </button>
-          )}
-        </div>
-
-        {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
-
-        {editingBody ? (
-          <textarea
-            autoFocus
-            value={bodyDraft}
-            onChange={e => setBodyDraft(e.target.value)}
-            onBlur={saveBody}
-            onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveBody(); }}
-            rows={3}
-            placeholder="описание"
-            className="w-full p-2 mb-4 rounded-lg bg-(--color-panel) text-sm
-                       border border-(--color-line) outline-none resize-none"
-          />
-        ) : (
-          <Editable
-            as="p"
-            onEdit={() => setEditingBody(true)}
-            className="text-sm whitespace-pre-wrap mb-4 cursor-text min-h-[1.5em]"
-          >
-            {item.body || (
-              <span className="text-(--color-muted)">описание — клик, чтобы добавить</span>
-            )}
-          </Editable>
-        )}
-
-        {item.blocks.length > 0 && (
-          <p className="text-xs text-(--color-muted) mb-3">
-            блокирует: {item.blocks.join(', ')}
-          </p>
-        )}
-
-        {item.checklist.length > 0 && (
-          <ul className="space-y-1.5 mb-4">
-            {item.checklist.map((s, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={s.done}
-                  onChange={() => toggleCheck(i)}
-                />
-                <span className={s.done ? 'text-(--color-muted) line-through' : ''}>
-                  {s.text}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="border-t border-(--color-line) pt-3">
-          {comments.length > 0 && (
-            <div className="space-y-2 mb-2">
-              {comments.map(c => (
-                <div key={c.id} className="text-xs">
-                  <span className="text-(--color-muted)">
-                    {c.created_at.slice(0, 10)} {c.author}:
-                  </span>{' '}
-                  {c.body}
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-2">
+    <Sheet onClose={onClose} maxWidth="max-w-lg">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex-1">
+          <span className="text-2xs font-mono text-(--color-muted)">
+            {item.id}
+          </span>
+          {editingTitle ? (
             <input
-              value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') sendComment(); }}
-              placeholder="комментарий"
-              disabled={sending}
-              className="flex-1 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                         border border-(--color-line) outline-none"
+              autoFocus
+              value={titleDraft}
+              onChange={e => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={e => { if (e.key === 'Enter') saveTitle(); }}
+              className="block w-full text-base font-medium bg-transparent
+                         border-b border-(--color-line) outline-none"
             />
-            <button
-              onClick={sendComment}
-              disabled={!newComment.trim() || sending}
-              className="h-8 px-3 rounded-lg bg-(--color-ink) text-(--color-ground)
-                         text-sm disabled:opacity-40"
+          ) : (
+            <Editable
+              as="h2"
+              onEdit={() => setEditingTitle(true)}
+              className="text-base font-medium cursor-text"
             >
-              Отправить
-            </button>
-          </div>
+              {item.title}
+            </Editable>
+          )}
         </div>
+        <button
+          onClick={onClose}
+          aria-label="Закрыть"
+          className="text-(--color-muted) hover:text-(--color-ink) text-lg leading-none"
+        >
+          ×
+        </button>
+      </div>
 
-        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-(--color-line)">
-          {item.status === 'done' && !item.archived_at && (
-            <button onClick={archive} className="text-xs text-(--color-muted)">
-              В архив
-            </button>
-          )}
-          {item.archived_at && (
-            <button onClick={restore} className="text-xs text-(--color-muted)">
-              Вернуть в работу
-            </button>
-          )}
-          <button onClick={remove} className="text-xs text-(--color-danger-ink) ml-auto">
-            Удалить
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {(Object.keys(STATUS_LABEL) as Item['status'][]).map(s => (
+          <button
+            key={s}
+            onClick={() => move(s)}
+            className={`text-2xs px-2 py-1 rounded-full border ${
+              item.status === s
+                ? 'border-(--color-accent) text-(--color-accent-ink)'
+                : 'border-(--color-line) text-(--color-muted)'
+            }`}
+          >
+            {STATUS_LABEL[s]}
           </button>
+        ))}
+      </div>
+
+      <div className="flex gap-1.5 mb-4">
+        {(Object.keys(TYPE_LABEL) as Item['type'][]).map(t => (
+          <button
+            key={t}
+            onClick={() => setType(t)}
+            className={`text-2xs px-2 py-1 rounded-full border ${
+              item.type === t
+                ? 'border-(--color-accent) text-(--color-accent-ink)'
+                : 'border-(--color-line) text-(--color-muted)'
+            }`}
+          >
+            {TYPE_LABEL[t]}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        <select
+          value={item.epic_id ?? ''}
+          onChange={e => setEpic(e.target.value)}
+          className="h-7 px-1.5 rounded text-2xs bg-transparent
+                     border border-(--color-line) text-(--color-muted)"
+        >
+          <option value="">— без эпика —</option>
+          {selectableEpics(epics, allItems, item.epic_id).map(ep => (
+            <option key={ep.id} value={ep.id}>{ep.title}</option>
+          ))}
+        </select>
+        {item.epic_id && onOpenEpic && (
+          <button
+            onClick={() => onOpenEpic(item.epic_id!)}
+            className="text-xs text-(--color-muted) hover:text-(--color-ink) underline"
+          >
+            открыть эпик
+          </button>
+        )}
+      </div>
+
+      {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
+
+      {editingBody ? (
+        <textarea
+          autoFocus
+          value={bodyDraft}
+          onChange={e => setBodyDraft(e.target.value)}
+          onBlur={saveBody}
+          onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveBody(); }}
+          rows={3}
+          placeholder="описание"
+          className="w-full p-2 mb-4 rounded-lg bg-(--color-panel) text-sm
+                     border border-(--color-line) outline-none resize-none
+                     focus:border-(--color-accent)"
+        />
+      ) : (
+        <Editable
+          as="p"
+          onEdit={() => setEditingBody(true)}
+          className="text-sm whitespace-pre-wrap mb-4 cursor-text min-h-[1.5em]"
+        >
+          {item.body || (
+            <span className="text-(--color-muted)">описание — клик, чтобы добавить</span>
+          )}
+        </Editable>
+      )}
+
+      {item.blocks.length > 0 && (
+        <p className="text-xs text-(--color-muted) mb-3">
+          блокирует: {item.blocks.join(', ')}
+        </p>
+      )}
+
+      {item.checklist.length > 0 && (
+        <ul className="space-y-1.5 mb-4">
+          {item.checklist.map((s, i) => (
+            <li key={i} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={s.done}
+                onChange={() => toggleCheck(i)}
+              />
+              <span className={s.done ? 'text-(--color-muted) line-through' : ''}>
+                {s.text}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="border-t border-(--color-line) pt-3">
+        {comments.length > 0 && (
+          <div className="space-y-2 mb-2">
+            {comments.map(c => (
+              <div key={c.id} className="text-xs">
+                <span className="text-(--color-muted)">
+                  {c.created_at.slice(0, 10)} {c.author}:
+                </span>{' '}
+                {c.body}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <input
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') sendComment(); }}
+            placeholder="комментарий"
+            disabled={sending}
+            className="flex-1 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+                       border border-(--color-line) outline-none
+                       focus:border-(--color-accent)"
+          />
+          <Button variant="primary" onClick={sendComment} disabled={!newComment.trim() || sending}>
+            Отправить
+          </Button>
         </div>
       </div>
-    </div>
+
+      <div className="flex items-center gap-3 mt-4 pt-3 border-t border-(--color-line)">
+        {item.status === 'done' && !item.archived_at && (
+          <button onClick={archive} className="text-xs text-(--color-muted) hover:text-(--color-ink)">
+            В архив
+          </button>
+        )}
+        {item.archived_at && (
+          <button onClick={restore} className="text-xs text-(--color-muted) hover:text-(--color-ink)">
+            Вернуть в работу
+          </button>
+        )}
+        <button onClick={remove} className="text-xs text-(--color-danger-ink) ml-auto">
+          Удалить
+        </button>
+      </div>
+    </Sheet>
   );
 }

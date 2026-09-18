@@ -19,7 +19,7 @@ import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
 import { swipeTarget, swipePreview, SWIPE_THRESHOLD } from './swipe';
 import type { Epic } from './supabase';
 import { Button } from './ui/Button';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { panelClass } from './ui/panel';
 
 const COLUMNS = [
@@ -321,16 +321,19 @@ export function Board() {
         </DragOverlay>
       </DndContext>
 
-      {openItem && (
-        <TaskModal
-          item={openItem}
-          epics={epics}
-          allItems={items}
-          onClose={() => setOpenItem(null)}
-          onChanged={() => reload(current)}
-          onOpenEpic={id => { setOpenItem(null); setViewEpic(id); }}
-        />
-      )}
+      <AnimatePresence>
+        {openItem && (
+          <TaskModal
+            key="task-modal"
+            item={openItem}
+            epics={epics}
+            allItems={items}
+            onClose={() => setOpenItem(null)}
+            onChanged={() => reload(current)}
+            onOpenEpic={id => { setOpenItem(null); setViewEpic(id); }}
+          />
+        )}
+      </AnimatePresence>
 
       {showArchive && (
         <ArchiveList
