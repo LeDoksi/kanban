@@ -21,7 +21,7 @@
 
 ---
 
-## Task 1: Токены, типографика, meta/manifest, зависимость `motion`
+### Task 1: Токены, типографика, meta/manifest, зависимость `motion`
 
 **Files:**
 - Modify: `web/src/styles.css`
@@ -127,7 +127,7 @@ git commit -m "Токены редизайна: тёплая палитра, а�
 
 ---
 
-## Task 2: Примитив `Button`
+### Task 2: Примитив `Button`
 
 **Files:**
 - Create: `web/src/ui/Button.tsx`
@@ -189,7 +189,7 @@ git commit -m "Примитив Button (KAN-94)"
 
 ---
 
-## Task 3: Примитив `Sheet`
+### Task 3: Примитив `Sheet`
 
 **Files:**
 - Create: `web/src/ui/Sheet.tsx`
@@ -266,7 +266,7 @@ git commit -m "Примитив Sheet (KAN-94)"
 
 ---
 
-## Task 4: Хелпер `panelClass`
+### Task 4: Хелпер `panelClass`
 
 **Files:**
 - Create: `web/src/ui/panel.ts`
@@ -306,7 +306,7 @@ git commit -m "Хелпер panelClass (KAN-94)"
 
 ---
 
-## Task 5: Экран входа (`App.tsx`)
+### Task 5: Экран входа (`App.tsx`)
 
 **Files:**
 - Modify: `web/src/App.tsx` (полная замена)
@@ -385,7 +385,7 @@ git commit -m "Экран входа на Button (KAN-94)"
 
 ---
 
-## Task 6: Шапка доски и заголовки колонок (`Board.tsx`)
+### Task 6: Шапка доски и заголовки колонок (`Board.tsx`)
 
 **Files:**
 - Modify: `web/src/Board.tsx`
@@ -499,7 +499,7 @@ git commit -m "Шапка доски и заголовки колонок на B
 
 ---
 
-## Task 7: Карточка задачи — motion drag/layout, panelClass
+### Task 7: Карточка задачи — motion drag/layout, panelClass
 
 **Files:**
 - Modify: `web/src/Board.tsx`
@@ -688,7 +688,7 @@ git commit -m "Карточка: motion layout/drag вместо ручного 
 
 ---
 
-## Task 8: `TaskModal.tsx` → Sheet
+### Task 8: `TaskModal.tsx` → Sheet
 
 **Files:**
 - Modify: `web/src/TaskModal.tsx` (полная замена)
@@ -1082,7 +1082,7 @@ git commit -m "TaskModal на Sheet (KAN-94)"
 
 ---
 
-## Task 9: `CreateModal.tsx` → Sheet
+### Task 9: `CreateModal.tsx` → Sheet
 
 **Files:**
 - Modify: `web/src/CreateModal.tsx` (полная замена)
@@ -1330,7 +1330,7 @@ git commit -m "CreateModal на Sheet (KAN-94)"
 
 ---
 
-## Task 10: `EpicModal.tsx` → Sheet
+### Task 10: `EpicModal.tsx` → Sheet
 
 **Files:**
 - Modify: `web/src/EpicModal.tsx` (полная замена)
@@ -1557,7 +1557,7 @@ git commit -m "EpicModal на Sheet (KAN-94)"
 
 ---
 
-## Task 11: `ProjectDrawer.tsx` + `NewProject.tsx` → Sheet/Button
+### Task 11: `ProjectDrawer.tsx` + `NewProject.tsx` → Sheet/Button
 
 **Files:**
 - Modify: `web/src/ProjectDrawer.tsx` (полная замена)
@@ -1799,7 +1799,7 @@ git commit -m "ProjectDrawer и NewProject на Sheet/Button (KAN-94)"
 
 ---
 
-## Task 12: `ArchiveList.tsx` → Sheet
+### Task 12: `ArchiveList.tsx` → Sheet
 
 **Files:**
 - Modify: `web/src/ArchiveList.tsx` (полная замена)
@@ -1957,7 +1957,7 @@ git commit -m "ArchiveList на Sheet (KAN-94)"
 
 ---
 
-## Task 13: Финальная чистка и проверка
+### Task 13: Финальная чистка и проверка
 
 **Files:**
 - Modify: `web/src/styles.css` (убрать временные алиасы)
