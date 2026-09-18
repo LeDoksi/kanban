@@ -349,14 +349,17 @@ export function Board() {
         />
       )}
 
-      {showCreate && (
-        <CreateModal
-          project={current}
-          epics={epics}
-          items={items}
-          onClose={() => setShowCreate(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showCreate && (
+          <CreateModal
+            key="create-modal"
+            project={current}
+            epics={epics}
+            items={items}
+            onClose={() => setShowCreate(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {viewEpic && (
         <EpicModal

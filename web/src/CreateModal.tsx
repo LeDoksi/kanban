@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { sb } from './supabase';
 import type { Item, Epic } from './supabase';
 import { guessType, stripPrefix } from './guess';
 import { selectableEpics } from './epics';
+import { Sheet } from './ui/Sheet';
+import { Button } from './ui/Button';
 
 export function CreateModal(
   { project, epics, items, onClose }: {
@@ -11,12 +13,6 @@ export function CreateModal(
   },
 ) {
   const [kind, setKind] = useState<'task' | 'epic'>('task');
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState<Item['type']>('task');
@@ -41,8 +37,6 @@ export function CreateModal(
     if (!clean) { setError('Напиши, что надо сделать'); return; }
     setBusy(true);
 
-    // Независимые запросы — параллельно, а не друг за другом: номер и
-    // префикс проекта не зависят один от другого.
     const [{ data: seqData, error: seqErr }, { data: p, error: pErr }] = await Promise.all([
       sb.rpc('next_seq', { p_project: project, p_kind: 'item' }),
       sb.from('projects').select('prefix').eq('id', project).single(),
@@ -63,8 +57,6 @@ export function CreateModal(
     });
     setBusy(false);
     if (error) { setError(error.message); return; }
-    // Доска обновится сама через Realtime — свой reload() тут был бы
-    // вторым полным запросом сразу вслед за тем же, что и так придёт.
     onClose();
   };
 
@@ -94,119 +86,103 @@ export function CreateModal(
   const options = selectableEpics(epics, items);
 
   return (
-    <div
-      className="fixed inset-0 bg-(--color-overlay) flex items-center justify-center p-4 z-50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-(--color-ground) rounded-lg max-w-md w-full p-5"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-3">
+    <Sheet onClose={onClose} maxWidth="max-w-md">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex gap-1.5">
+          {(['task', 'epic'] as const).map(k => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => { setKind(k); setError(''); }}
+              className={`text-sm px-3 py-1 rounded-full border ${
+                kind === k
+                  ? 'border-(--color-accent) text-(--color-accent-ink)'
+                  : 'border-(--color-line) text-(--color-muted)'
+              }`}
+            >
+              {k === 'task' ? 'Задача' : 'Эпик'}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Закрыть"
+          className="text-(--color-muted) hover:text-(--color-ink) text-lg leading-none"
+        >
+          ×
+        </button>
+      </div>
+
+      {kind === 'task' ? (
+        <form onSubmit={submitTask} className="space-y-2">
+          <textarea
+            autoFocus
+            value={title}
+            onChange={e => onTitle(e.target.value)}
+            placeholder="баг: календарь не листает в ноябрь"
+            rows={2}
+            className="w-full p-2 rounded-lg bg-(--color-panel) text-sm
+                       border border-(--color-line) outline-none resize-none
+                       focus:border-(--color-accent)"
+          />
           <div className="flex gap-1.5">
-            {(['task', 'epic'] as const).map(k => (
+            {(['task', 'bug', 'chore'] as const).map(t => (
               <button
-                key={k}
+                key={t}
                 type="button"
-                onClick={() => { setKind(k); setError(''); }}
-                className={`text-sm px-3 py-1 rounded-full border ${
-                  kind === k
-                    ? 'border-(--color-muted)'
+                onClick={() => { setType(t); setTouched(true); }}
+                className={`text-2xs px-2 py-1 rounded-full border ${
+                  type === t
+                    ? 'border-(--color-accent) text-(--color-accent-ink)'
                     : 'border-(--color-line) text-(--color-muted)'
                 }`}
               >
-                {k === 'task' ? 'Задача' : 'Эпик'}
+                {t === 'task' ? 'задача' : t === 'bug' ? 'баг' : 'долг'}
               </button>
             ))}
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Закрыть"
-            className="text-(--color-muted) text-lg leading-none"
+          <select
+            value={epicId}
+            onChange={e => setEpicId(e.target.value)}
+            className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+                       border border-(--color-line)"
           >
-            ×
-          </button>
-        </div>
-
-        {kind === 'task' ? (
-          <form onSubmit={submitTask} className="space-y-2">
-            <textarea
-              autoFocus
-              value={title}
-              onChange={e => onTitle(e.target.value)}
-              placeholder="баг: календарь не листает в ноябрь"
-              rows={2}
-              className="w-full p-2 rounded-lg bg-(--color-panel) text-sm
-                         border border-(--color-line) outline-none resize-none
-                         focus:border-(--color-muted)"
-            />
-            <div className="flex gap-1.5">
-              {(['task', 'bug', 'chore'] as const).map(t => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => { setType(t); setTouched(true); }}
-                  className={`text-[11px] px-2 py-1 rounded-full border ${
-                    type === t
-                      ? 'border-(--color-muted)'
-                      : 'border-(--color-line) text-(--color-muted)'
-                  }`}
-                >
-                  {t === 'task' ? 'задача' : t === 'bug' ? 'баг' : 'долг'}
-                </button>
-              ))}
-            </div>
-            <select
-              value={epicId}
-              onChange={e => setEpicId(e.target.value)}
-              className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                         border border-(--color-line)"
-            >
-              <option value="">— без эпика —</option>
-              {options.map(ep => (
-                <option key={ep.id} value={ep.id}>{ep.title}</option>
-              ))}
-            </select>
-            {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full h-8 rounded-lg bg-(--color-ink)
-                         text-(--color-ground) text-sm"
-            >
-              {busy ? '…' : 'В Backlog'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={submitEpic} className="space-y-2">
-            <input
-              autoFocus
-              value={epicTitle}
-              onChange={e => { setEpicTitle(e.target.value); setError(''); }}
-              placeholder="крупная тема"
-              className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                         border border-(--color-line) outline-none"
-            />
-            <textarea
-              value={goal}
-              onChange={e => setGoal(e.target.value)}
-              placeholder="цель (необязательно)"
-              rows={2}
-              className="w-full p-2 rounded-lg bg-(--color-panel) text-sm
-                         border border-(--color-line) outline-none resize-none"
-            />
-            {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full h-8 rounded-lg bg-(--color-ink)
-                         text-(--color-ground) text-sm"
-            >
-              {busy ? '…' : 'Создать'}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+            <option value="">— без эпика —</option>
+            {options.map(ep => (
+              <option key={ep.id} value={ep.id}>{ep.title}</option>
+            ))}
+          </select>
+          {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
+          <Button type="submit" variant="primary" disabled={busy} className="w-full">
+            {busy ? '…' : 'В Backlog'}
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={submitEpic} className="space-y-2">
+          <input
+            autoFocus
+            value={epicTitle}
+            onChange={e => { setEpicTitle(e.target.value); setError(''); }}
+            placeholder="крупная тема"
+            className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+                       border border-(--color-line) outline-none
+                       focus:border-(--color-accent)"
+          />
+          <textarea
+            value={goal}
+            onChange={e => setGoal(e.target.value)}
+            placeholder="цель (необязательно)"
+            rows={2}
+            className="w-full p-2 rounded-lg bg-(--color-panel) text-sm
+                       border border-(--color-line) outline-none resize-none
+                       focus:border-(--color-accent)"
+          />
+          {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
+          <Button type="submit" variant="primary" disabled={busy} className="w-full">
+            {busy ? '…' : 'Создать'}
+          </Button>
+        </form>
+      )}
+    </Sheet>
   );
 }
