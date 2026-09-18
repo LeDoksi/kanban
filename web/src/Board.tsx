@@ -564,11 +564,12 @@ function Card(
           if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); }
         }}
-        animate={
-          transform
-            ? { x: transform.x, y: transform.y, zIndex: 10, opacity: isDragging ? 0.5 : 1 }
-            : { x: 0, y: 0, zIndex: 0, opacity: 1 }
-        }
+        animate={{
+          x: transform?.x ?? 0,
+          y: transform?.y ?? 0,
+          zIndex: isDragging ? 10 : 0,
+          opacity: isDragging ? 0.5 : 1,
+        }}
         transition={{ duration: isDragging ? 0 : 0.2, ease: 'easeOut' }}
         {...listeners}
         onClick={() => onOpen(item)}
