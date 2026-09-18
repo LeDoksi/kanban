@@ -361,13 +361,16 @@ export function Board() {
         )}
       </AnimatePresence>
 
-      {viewEpic && (
-        <EpicModal
-          epicId={viewEpic}
-          onClose={() => setViewEpic(null)}
-          onOpenItem={i => { setViewEpic(null); setOpenItem(i); }}
-        />
-      )}
+      <AnimatePresence>
+        {viewEpic && (
+          <EpicModal
+            key="epic-modal"
+            epicId={viewEpic}
+            onClose={() => setViewEpic(null)}
+            onOpenItem={i => { setViewEpic(null); setOpenItem(i); }}
+          />
+        )}
+      </AnimatePresence>
 
       {showProjects && (
         <ProjectDrawer
