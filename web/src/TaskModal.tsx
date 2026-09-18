@@ -104,6 +104,8 @@ export function TaskModal(
 
   const sendComment = async () => {
     const text = newComment.trim();
+    // sending гонит от тройного клика/Enter до отклика сети: без него
+    // каждый клик видит ещё не очищенный newComment и шлёт свою вставку.
     if (!text || sending) return;
     setSending(true);
     const { error } = await sb.from('comments')

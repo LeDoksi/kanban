@@ -37,6 +37,8 @@ export function CreateModal(
     if (!clean) { setError('Напиши, что надо сделать'); return; }
     setBusy(true);
 
+    // Независимые запросы — параллельно, а не друг за другом: номер и
+    // префикс проекта не зависят один от другого.
     const [{ data: seqData, error: seqErr }, { data: p, error: pErr }] = await Promise.all([
       sb.rpc('next_seq', { p_project: project, p_kind: 'item' }),
       sb.from('projects').select('prefix').eq('id', project).single(),
@@ -57,6 +59,8 @@ export function CreateModal(
     });
     setBusy(false);
     if (error) { setError(error.message); return; }
+    // Доска обновится сама через Realtime — свой reload() тут был бы
+    // вторым полным запросом сразу вслед за тем же, что и так придёт.
     onClose();
   };
 

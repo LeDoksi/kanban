@@ -54,6 +54,8 @@ export function EpicModal(
   };
 
   const remove = async () => {
+    // items.epic_id -> epics.id is ON DELETE SET NULL: задачи не удаляются,
+    // просто теряют привязку к эпику.
     const warning = items.length > 0
       ? `Удалить эпик «${epic?.title}»? Задачи (${items.length}) останутся, но потеряют привязку к нему.`
       : `Удалить эпик «${epic?.title}»?`;

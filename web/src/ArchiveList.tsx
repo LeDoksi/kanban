@@ -38,6 +38,9 @@ export function ArchiveList(
     onRestore: (item: Item) => void; onClose: () => void;
   },
 ) {
+  // Одинаково выглядели «правда в архиве» (archived_at) и «готово, но не
+  // поместилось в кап колонки» (архивной пометки нет) — владелец принимал
+  // второе за первое. Разные секции делают разницу видимой.
   const archived = items.filter(i => i.archived_at);
   const overflow = items.filter(i => !i.archived_at);
 

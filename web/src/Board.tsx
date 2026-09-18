@@ -542,17 +542,24 @@ function Card(
     setDragX(0);
   };
 
+  // target — с порогом, решает, что случится на onTouchEnd. preview —
+  // без порога, только для панели: та открывается с первого пикселя
+  // свайпа, а не выстреливает внезапно после срабатывания.
   const target = swipeTarget(item.status, dragX);
   const preview = swipePreview(item.status, dragX);
   const committed = Math.abs(dragX) > SWIPE_THRESHOLD;
 
   const move = async (status: Item['status']) => {
     const { error } = await setStatus(item.id, status);
+    // Молчаливый отказ выглядел бы как «карточка сама вернулась назад».
     if (error) { onError(error.message); return; }
     onChanged();
   };
 
   return (
+    // Панель со следующим статусом лежит позади карточки и открывается
+    // по мере сдвига — раньше подсказка была приклеена к самой карточке
+    // и уезжала с ней к краю экрана, толком не успевая показаться.
     <div className="relative">
       {preview && (
         <div

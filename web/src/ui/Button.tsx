@@ -1,13 +1,11 @@
 import type { ButtonHTMLAttributes } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary';
 type Size = 'sm' | 'md';
 
 const VARIANT: Record<Variant, string> = {
   primary: 'bg-(--color-accent) text-(--color-ground)',
   secondary: 'bg-(--color-panel) border border-(--color-line)',
-  ghost: 'text-(--color-muted) hover:text-(--color-ink)',
-  danger: 'text-(--color-danger-ink)',
 };
 
 const SIZE: Record<Size, string> = {
