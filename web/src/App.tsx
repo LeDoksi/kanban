@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { sb } from './supabase';
 import { Board } from './Board';
+import { Button } from './ui/Button';
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -38,13 +39,9 @@ function SignIn() {
       <div className="w-full max-w-72 space-y-3 text-center">
         <h1 className="text-base font-medium">Канбан</h1>
         {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
-        <button
-          onClick={signIn}
-          className="w-full h-9 rounded-lg bg-(--color-ink)
-                     text-(--color-ground) text-sm"
-        >
+        <Button onClick={signIn} variant="primary" className="w-full">
           Войти через Google
-        </button>
+        </Button>
       </div>
     </div>
   );
