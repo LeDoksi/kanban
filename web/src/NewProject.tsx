@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { sb } from './supabase';
 import { slugify, prefixify } from './slug';
+import { Button } from './ui/Button';
 
 export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -48,12 +49,9 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="h-8 px-3 rounded-lg border border-(--color-line) text-sm"
-      >
+      <Button variant="secondary" onClick={() => setOpen(true)}>
         Новый проект
-      </button>
+      </Button>
     );
   }
 
@@ -65,7 +63,8 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
         onChange={e => onName(e.target.value)}
         placeholder="имя: Семейное приложение"
         className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                   border border-(--color-line) outline-none"
+                   border border-(--color-line) outline-none
+                   focus:border-(--color-accent)"
       />
       <div className="flex gap-2">
         <input
@@ -73,14 +72,16 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
           onChange={e => { setSlug(e.target.value); setSlugTouched(true); setError(''); }}
           placeholder="слаг"
           className="flex-1 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                     border border-(--color-line) outline-none"
+                     border border-(--color-line) outline-none
+                     focus:border-(--color-accent)"
         />
         <input
           value={prefix}
           onChange={e => { setPrefix(e.target.value); setPrefixTouched(true); setError(''); }}
           placeholder="префикс"
           className="w-20 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                     border border-(--color-line) outline-none"
+                     border border-(--color-line) outline-none
+                     focus:border-(--color-accent)"
         />
       </div>
       <input
@@ -88,16 +89,18 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
         onChange={e => setDescription(e.target.value)}
         placeholder="описание (необязательно)"
         className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                   border border-(--color-line) outline-none"
+                   border border-(--color-line) outline-none
+                   focus:border-(--color-accent)"
       />
       <input
         value={repoPath}
         onChange={e => setRepoPath(e.target.value)}
         placeholder="путь к папке на компе (необязательно)"
         className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
-                   border border-(--color-line) outline-none"
+                   border border-(--color-line) outline-none
+                   focus:border-(--color-accent)"
       />
-      <p className="text-[11px] text-(--color-muted)">
+      <p className="text-2xs text-(--color-muted)">
         Путь нужен, чтобы я сама находила проект по рабочей папке — без него
         придётся называть проект явно.
       </p>
@@ -105,22 +108,12 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
       {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
 
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={busy}
-          className="flex-1 h-8 rounded-lg bg-(--color-ink)
-                     text-(--color-ground) text-sm"
-        >
+        <Button type="submit" variant="primary" disabled={busy} className="flex-1">
           {busy ? '…' : 'Создать'}
-        </button>
-        <button
-          type="button"
-          onClick={() => { setOpen(false); setError(''); }}
-          className="h-8 px-3 rounded-lg border border-(--color-line)
-                     text-sm text-(--color-muted)"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => { setOpen(false); setError(''); }}>
           Отмена
-        </button>
+        </Button>
       </div>
     </form>
   );

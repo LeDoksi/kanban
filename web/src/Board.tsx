@@ -372,14 +372,17 @@ export function Board() {
         )}
       </AnimatePresence>
 
-      {showProjects && (
-        <ProjectDrawer
-          current={current}
-          rows={projectRows}
-          onSelect={id => { setCurrent(id); reloadProjects(); }}
-          onClose={() => setShowProjects(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showProjects && (
+          <ProjectDrawer
+            key="project-drawer"
+            current={current}
+            rows={projectRows}
+            onSelect={id => { setCurrent(id); reloadProjects(); }}
+            onClose={() => setShowProjects(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
