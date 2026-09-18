@@ -19,6 +19,8 @@ import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
 import { swipeTarget, swipePreview, SWIPE_THRESHOLD } from './swipe';
 import type { Epic } from './supabase';
 import { Button } from './ui/Button';
+import { motion } from 'motion/react';
+import { panelClass } from './ui/panel';
 
 const COLUMNS = [
   { key: 'hold',    label: 'Hold' },
@@ -474,27 +476,21 @@ function Column(
 function CardPreview({ item }: { item: Item }) {
   const waiting = item.status === 'waiting';
   return (
-    <article
-      className={`rounded-lg p-2.5 text-sm shadow-lg rotate-1 ${
-        waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
-      }`}
-    >
+    <article className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-sm shadow-lg rotate-1')}>
       <div className="flex items-center gap-1.5 mb-1">
-        <span
-          className={`text-[11px] font-mono ${
-            waiting ? 'text-(--color-wait-ink)' : 'text-(--color-muted)'
-          }`}
-        >
+        <span className={`text-2xs font-mono ${
+          waiting ? 'text-(--color-accent-ink)' : 'text-(--color-muted)'
+        }`}>
           {item.seq}
         </span>
         {item.type !== 'task' && (
-          <span className="text-[10px] px-1.5 py-px rounded
+          <span className="text-2xs px-1.5 py-px rounded
                            bg-(--color-danger) text-(--color-danger-ink)">
             {item.type === 'bug' ? 'баг' : 'долг'}
           </span>
         )}
       </div>
-      <p className={waiting ? 'text-(--color-wait-ink)' : ''}>{item.title}</p>
+      <p className={waiting ? 'text-(--color-accent-ink)' : ''}>{item.title}</p>
     </article>
   );
 }
@@ -507,17 +503,16 @@ function Card(
 ) {
   const done = item.checklist.filter(s => s.done).length;
   const waiting = item.status === 'waiting';
-  const { listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: item.id });
-  const style = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    transition: transition ?? undefined,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 10 : undefined,
-  };
+  // transition: null — как в официальном примере dnd-kit + Framer Motion:
+  // dnd-kit больше не пишет свой CSS-transition, всю анимацию позиции
+  // (в т.ч. после onDragEnd/reload(), когда сам dnd-kit уже молчит) ведёт
+  // motion через layoutId.
+  const { listeners, setNodeRef, transform, isDragging } =
+    useSortable({ id: item.id, transition: null });
 
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [dragX, setDragX] = useState(0);
+  const swiping = touchStartX !== null;
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.touches[0].clientX);
@@ -526,35 +521,23 @@ function Card(
     if (touchStartX === null) return;
     setDragX(e.touches[0].clientX - touchStartX);
   };
-  // ponytail: свайп проверяет только сдвиг по X мимо порога, без учёта
-  // скорости и без анимации возврата — если порог не пройден, dragX
-  // просто сбрасывается в 0, и карточка резко становится на место.
-  // Достаточно для «свайп меняет статус»; плавный отскок и инерция —
-  // если без них станет реально раздражать в использовании.
   const onTouchEnd = () => {
     if (target) move(target);
     setTouchStartX(null);
     setDragX(0);
   };
 
-  // target — с порогом, решает, что случится на onTouchEnd. preview —
-  // без порога, только для панели: та открывается с первого пикселя
-  // свайпа, а не выстреливает внезапно после срабатывания.
   const target = swipeTarget(item.status, dragX);
   const preview = swipePreview(item.status, dragX);
   const committed = Math.abs(dragX) > SWIPE_THRESHOLD;
 
   const move = async (status: Item['status']) => {
     const { error } = await setStatus(item.id, status);
-    // Молчаливый отказ выглядел бы как «карточка сама вернулась назад».
     if (error) { onError(error.message); return; }
     onChanged();
   };
 
   return (
-    // Панель со следующим статусом лежит позади карточки и открывается
-    // по мере сдвига — раньше подсказка была приклеена к самой карточке
-    // и уезжала с ней к краю экрана, толком не успевая показаться.
     <div className="relative">
       {preview && (
         <div
@@ -572,51 +555,56 @@ function Card(
           <span>{COLUMNS.find(c => c.key === preview)?.label}</span>
         </div>
       )}
-      <article
+      <motion.article
         ref={setNodeRef}
+        layoutId={item.id}
         role="button"
         tabIndex={0}
         onKeyDown={e => {
           if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); }
         }}
-        style={{
-          ...style,
-          transform: `${style.transform ?? ''} translateX(${dragX}px)`.trim(),
-        }}
+        animate={
+          transform
+            ? { x: transform.x, y: transform.y, zIndex: 10, opacity: isDragging ? 0.5 : 1 }
+            : { x: 0, y: 0, zIndex: 0, opacity: 1 }
+        }
+        transition={{ duration: isDragging ? 0 : 0.2, ease: 'easeOut' }}
         {...listeners}
         onClick={() => onOpen(item)}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        className={`rounded-lg p-2.5 text-sm cursor-grab touch-pan-y ${
-          waiting ? 'bg-(--color-wait)' : 'bg-(--color-panel)'
-        }`}
+        className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-sm cursor-grab')}
       >
-        <div className="flex items-center gap-1.5 mb-1">
-          <span
-            className={`text-[11px] font-mono ${
-              waiting ? 'text-(--color-wait-ink)' : 'text-(--color-muted)'
-            }`}
-          >
-            {item.seq}
-          </span>
-          {item.type !== 'task' && (
-            <span className="text-[10px] px-1.5 py-px rounded
-                             bg-(--color-danger) text-(--color-danger-ink)">
-              {item.type === 'bug' ? 'баг' : 'долг'}
+        <motion.div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          animate={{ x: dragX }}
+          transition={swiping ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 32 }}
+          className="touch-pan-y"
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className={`text-2xs font-mono ${
+              waiting ? 'text-(--color-accent-ink)' : 'text-(--color-muted)'
+            }`}>
+              {item.seq}
             </span>
+            {item.type !== 'task' && (
+              <span className="text-2xs px-1.5 py-px rounded
+                               bg-(--color-danger) text-(--color-danger-ink)">
+                {item.type === 'bug' ? 'баг' : 'долг'}
+              </span>
+            )}
+          </div>
+
+          <p className={waiting ? 'text-(--color-accent-ink)' : ''}>{item.title}</p>
+
+          {item.checklist.length > 0 && (
+            <p className="text-2xs text-(--color-muted) mt-1.5">
+              {done}/{item.checklist.length}
+            </p>
           )}
-        </div>
-
-        <p className={waiting ? 'text-(--color-wait-ink)' : ''}>{item.title}</p>
-
-        {item.checklist.length > 0 && (
-          <p className="text-[11px] text-(--color-muted) mt-1.5">
-            {done}/{item.checklist.length}
-          </p>
-        )}
-      </article>
+        </motion.div>
+      </motion.article>
     </div>
   );
 }
