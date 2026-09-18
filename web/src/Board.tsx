@@ -335,19 +335,22 @@ export function Board() {
         )}
       </AnimatePresence>
 
-      {showArchive && (
-        <ArchiveList
-          items={archiveItems}
-          onOpen={i => { setShowArchive(false); setOpenItem(i); }}
-          onRestore={async i => {
-            const { error } = await sb.from('items')
-              .update({ status: 'doing', archived_at: null }).eq('id', i.id);
-            if (error) { setErr(error.message); return; }
-            reload(current);
-          }}
-          onClose={() => setShowArchive(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showArchive && (
+          <ArchiveList
+            key="archive-list"
+            items={archiveItems}
+            onOpen={i => { setShowArchive(false); setOpenItem(i); }}
+            onRestore={async i => {
+              const { error } = await sb.from('items')
+                .update({ status: 'doing', archived_at: null }).eq('id', i.id);
+              if (error) { setErr(error.message); return; }
+              reload(current);
+            }}
+            onClose={() => setShowArchive(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showCreate && (
