@@ -18,6 +18,7 @@ import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
 import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
 import { swipeTarget, swipePreview, SWIPE_THRESHOLD } from './swipe';
 import type { Epic } from './supabase';
+import { Button } from './ui/Button';
 
 const COLUMNS = [
   { key: 'hold',    label: 'Hold' },
@@ -255,13 +256,9 @@ export function Board() {
   return (
     <div className="min-h-dvh p-4 md:p-6 max-w-6xl mx-auto">
       <header className="flex items-center gap-3 mb-5 flex-wrap">
-        <button
-          onClick={() => setShowProjects(true)}
-          className="h-8 px-3 rounded-lg bg-(--color-panel)
-                     border border-(--color-line) text-sm"
-        >
+        <Button variant="secondary" onClick={() => setShowProjects(true)}>
           {currentProject?.name ?? 'Проекты'}
-        </button>
+        </Button>
         {currentProject && (
           editingDescription ? (
             <textarea
@@ -288,13 +285,9 @@ export function Board() {
         <span className="text-sm text-(--color-muted)">
           {items.filter(i => i.status === 'done').length}/{items.length}
         </span>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="ml-auto h-8 px-3 rounded-lg bg-(--color-ink)
-                     text-(--color-ground) text-sm"
-        >
+        <Button variant="primary" className="ml-auto" onClick={() => setShowCreate(true)}>
           Новая задача
-        </button>
+        </Button>
       </header>
 
       {/* Телефон — одна вертикаль, десктоп — пять колонок. */}
@@ -413,9 +406,14 @@ function Column(
       ref={setNodeRef}
       className="rounded-lg border border-(--color-line) p-2"
     >
-      <h2 className="text-xs text-(--color-muted) mb-2 px-1
+      <h2 className="text-xs text-(--color-muted) mb-2 px-1 flex items-center gap-1.5
                      sticky top-0 bg-(--color-ground) py-1 z-10">
-        {col.label} {full.length > 0 && full.length}
+        {col.label}
+        {full.length > 0 && (
+          <span className="text-2xs px-1.5 rounded-full bg-(--color-panel)">
+            {full.length}
+          </span>
+        )}
       </h2>
       <SortableContext
         items={[...groups.flatMap(g => g.items), ...ungrouped].map(i => i.id)}
@@ -429,7 +427,7 @@ function Column(
             <div key={epic.id} className="rounded-lg border border-(--color-line) p-1.5">
               <button
                 onClick={() => onOpenEpic(epic.id)}
-                className="text-[11px] text-(--color-muted) underline mb-1 px-1 block"
+                className="text-2xs text-(--color-muted) hover:text-(--color-ink) underline mb-1 px-1 block"
               >
                 {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
               </button>
@@ -444,7 +442,7 @@ function Column(
             <button
               key={epic.id}
               onClick={() => onOpenEpic(epic.id)}
-              className="text-[11px] text-(--color-muted) underline px-1 block"
+              className="text-2xs text-(--color-muted) hover:text-(--color-ink) underline px-1 block"
             >
               {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
             </button>
@@ -461,7 +459,7 @@ function Column(
       {capped && (hiddenDone > 0 || archivedCount > 0) && (
         <button
           onClick={onShowArchive}
-          className="text-xs text-(--color-muted) mt-2 px-1"
+          className="text-xs text-(--color-muted) hover:text-(--color-ink) mt-2 px-1"
         >
           ещё {hiddenDone + archivedCount} · архив
         </button>
