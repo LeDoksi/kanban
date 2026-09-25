@@ -205,12 +205,15 @@ export function TaskModal(
         ))}
       </div>
 
+      {/* select сжимается, а не кнопка: с длинным названием эпика select
+          растягивался на всю ширину и выталкивал «открыть эпик» за край —
+          на телефоне модалку приходилось листать вбок (KAN-111). */}
       <div className="flex items-center gap-2 mb-3">
         <select
           value={item.epic_id ?? ''}
           onChange={e => setEpic(e.target.value)}
-          className="h-7 px-1.5 rounded text-2xs bg-transparent
-                     border border-(--color-line) text-(--color-muted)"
+          className="min-w-0 flex-1 h-7 px-1.5 rounded text-2xs bg-transparent
+                     border border-(--color-line) text-(--color-muted) truncate"
         >
           <option value="">— без эпика —</option>
           {selectableEpics(epics, allItems, item.epic_id).map(ep => (
@@ -220,7 +223,7 @@ export function TaskModal(
         {item.epic_id && onOpenEpic && (
           <button
             onClick={() => onOpenEpic(item.epic_id!)}
-            className="text-xs text-(--color-muted) hover:text-(--color-ink) underline"
+            className="shrink-0 whitespace-nowrap text-xs text-(--color-muted) hover:text-(--color-ink) underline"
           >
             открыть эпик
           </button>
