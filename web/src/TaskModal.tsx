@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X } from '@phosphor-icons/react';
 import { sb, setStatus } from './supabase';
 import type { Item, Comment, Epic } from './supabase';
 import { selectableEpics } from './epics';
 import { Editable } from './Editable';
-import { Sheet } from './ui/Sheet';
+import { Sheet, SheetCloseButton } from './ui/Sheet';
 import { Button } from './ui/Button';
 import { Markdown } from './ui/Markdown';
 import { relTime } from './time';
@@ -141,7 +140,7 @@ export function TaskModal(
   };
 
   return (
-    <Sheet onClose={onClose} maxWidth="max-w-lg">
+    <Sheet title={item.title} onClose={onClose}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1">
           <span className="text-micro font-mono text-(--color-muted)">
@@ -167,9 +166,7 @@ export function TaskModal(
             </Editable>
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
-          <X size={20} />
-        </Button>
+        <SheetCloseButton />
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-2">

@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X } from '@phosphor-icons/react';
 import { sb } from './supabase';
 import type { Item, Epic } from './supabase';
 import { epicProgress } from './epics';
 import { Editable } from './Editable';
-import { Sheet } from './ui/Sheet';
-import { Button } from './ui/Button';
+import { Sheet, SheetCloseButton } from './ui/Sheet';
 
 export function EpicModal(
   { epicId, onClose, onOpenItem }: {
@@ -70,7 +68,7 @@ export function EpicModal(
   const { done, total } = epicProgress(epicId, items);
 
   return (
-    <Sheet onClose={onClose} maxWidth="max-w-lg">
+    <Sheet title={epic?.title ?? 'Эпик'} onClose={onClose}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1">
           {editingTitle ? (
@@ -93,9 +91,7 @@ export function EpicModal(
             </Editable>
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
-          <X size={20} />
-        </Button>
+        <SheetCloseButton />
       </div>
 
       {err && <p className="text-body text-(--color-danger) mb-3">{err}</p>}

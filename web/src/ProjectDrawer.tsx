@@ -1,8 +1,6 @@
-import { X } from '@phosphor-icons/react';
 import type { Project } from './supabase';
 import { NewProject } from './NewProject';
-import { Sheet } from './ui/Sheet';
-import { Button } from './ui/Button';
+import { Sheet, SheetCloseButton } from './ui/Sheet';
 
 export type ProjectRow = { project: Project; total: number; done: number; waiting: number };
 
@@ -13,12 +11,10 @@ export function ProjectDrawer(
   },
 ) {
   return (
-    <Sheet onClose={onClose} placement="left">
+    <Sheet title="Проекты" onClose={onClose} side="left">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-title font-medium">Проекты</h2>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
-          <X size={20} />
-        </Button>
+        <SheetCloseButton />
       </div>
 
       <NewProject onCreated={id => { onSelect(id); onClose(); }} />
