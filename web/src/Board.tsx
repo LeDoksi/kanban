@@ -291,7 +291,6 @@ export function Board() {
               allItems={items}
               archivedCount={archivedCount}
               onChanged={() => reload(current)}
-              onError={msg => toasts.show(msg)}
               onOpen={setOpenItem}
               onOpenEpic={id => setViewEpic(id)}
               onShowArchive={() => setShowArchive(true)}

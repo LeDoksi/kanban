@@ -83,3 +83,11 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* Долгое нажатие на карточку открывает наше меню; системное меню iOS
+   (выделить, поделиться) и выделение текста ему мешали бы. */
+.no-callout {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

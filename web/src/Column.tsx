@@ -7,10 +7,10 @@ import { COLUMNS } from './columns';
 import { Card } from './Card';
 
 export function Column(
-  { col, items, epics, allItems, archivedCount, onChanged, onError, onOpen, onOpenEpic, onShowArchive }: {
+  { col, items, epics, allItems, archivedCount, onChanged, onOpen, onOpenEpic, onShowArchive }: {
     col: typeof COLUMNS[number]; items: Item[]; epics: Epic[]; allItems: Item[];
     archivedCount: number;
-    onChanged: () => void; onError: (msg: string) => void;
+    onChanged: () => void;
     onOpen: (item: Item) => void; onOpenEpic: (epicId: string) => void;
     onShowArchive: () => void;
   },
@@ -66,7 +66,7 @@ export function Column(
               </button>
               <div className="space-y-2">
                 {epicItems.map(i => (
-                  <Card key={i.id} item={i} onChanged={onChanged} onError={onError} onOpen={onOpen} />
+                  <Card key={i.id} item={i} onChanged={onChanged} onOpen={onOpen} />
                 ))}
               </div>
             </div>
@@ -83,7 +83,7 @@ export function Column(
           {ungrouped.length > 0 && (
             <div className="space-y-2">
               {ungrouped.map(i => (
-                <Card key={i.id} item={i} onChanged={onChanged} onError={onError} onOpen={onOpen} />
+                <Card key={i.id} item={i} onChanged={onChanged} onOpen={onOpen} />
               ))}
             </div>
           )}
