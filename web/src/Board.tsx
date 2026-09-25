@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   DndContext, DragOverlay, type DragEndEvent,
   MouseSensor, useSensor, useSensors,
@@ -17,8 +17,14 @@ import type { Epic } from './supabase';
 import { Button } from './ui/Button';
 import { AnimatePresence } from 'motion/react';
 import { toasts } from './ui/toast';
-import { COLUMNS } from './columns';
-import { storage, readLastProject, writeLastProject, pickProject } from './prefs';
+import { COLUMNS, STATUS_ORDER, type Status } from './columns';
+import {
+  storage, readLastProject, writeLastProject, pickProject,
+  readLastColumn, writeLastColumn, startColumn,
+} from './prefs';
+import { useMedia } from './useMedia';
+import { ColumnTabs } from './ColumnTabs';
+import { Lane } from './Lane';
 import { CardPreview } from './Card';
 import { Column } from './Column';
 
@@ -38,6 +44,17 @@ export function Board() {
   // местом, ни над чужой колонкой — только над существующими карточками.
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  const isDesktop = useMedia('(min-width: 1024px)');
+  const [activeColumn, setActiveColumn] = useState<Status>('backlog');
+  // Стартовая колонка выбирается один раз на проект — по первой загрузке
+  // его задач, а не при каждом realtime-обновлении.
+  const columnPicked = useRef<string | null>(null);
+  const selectColumn = useCallback((s: Status) => {
+    setActiveColumn(s);
+    if (columnPicked.current) writeLastColumn(storage(), columnPicked.current, s);
+  }, []);
+  const selectColumnIndex = useCallback((i: number) => selectColumn(STATUS_ORDER[i]), [selectColumn]);
+
   const reload = async (project: string) => {
     if (!project) return;
     const { data, error } = await sb.from('items').select('*')
@@ -47,6 +64,10 @@ export function Board() {
     const list = (data ?? []) as Item[];
     setItems(list);
     setOpenItem(prev => prev ? (list.find(i => i.id === prev.id) ?? prev) : null);
+    if (columnPicked.current !== project) {
+      columnPicked.current = project;
+      setActiveColumn(startColumn(list, readLastColumn(storage(), project)));
+    }
   };
 
   const reloadEpics = async (project: string) => {
@@ -164,6 +185,8 @@ export function Board() {
   const doneShownIds = shownDoneIds(items);
   const activeItem = activeId ? items.find(i => i.id === activeId) ?? null : null;
   const archivedCount = items.filter(i => i.archived_at).length;
+  const counts = Object.fromEntries(STATUS_ORDER.map(s =>
+    [s, items.filter(i => i.status === s && !i.archived_at).length])) as Record<Status, number>;
   const archiveItems = items
     .filter(i => i.archived_at || (i.status === 'done' && !doneShownIds.has(i.id)))
     .sort((a, b) =>
@@ -238,9 +261,25 @@ export function Board() {
     reload(current);
   };
 
+  const renderColumn = (col: typeof COLUMNS[number], bare: boolean) => (
+    <Column
+      key={col.key}
+      col={col}
+      bare={bare}
+      items={items.filter(i => i.status === col.key && !i.archived_at)}
+      epics={epics}
+      allItems={items}
+      archivedCount={archivedCount}
+      onChanged={() => reload(current)}
+      onOpen={setOpenItem}
+      onOpenEpic={id => setViewEpic(id)}
+      onShowArchive={() => setShowArchive(true)}
+    />
+  );
+
   return (
-    <div className="min-h-dvh p-4 md:p-6 max-w-6xl mx-auto">
-      <header className="flex items-center gap-3 mb-5 flex-wrap">
+    <div className="h-dvh flex flex-col max-w-[1440px] mx-auto">
+      <header className="flex items-center gap-3 flex-wrap px-4 pt-3 pb-2 lg:px-6 lg:pt-5 lg:pb-4">
         <Button variant="secondary" onClick={() => setShowProjects(true)}>
           {currentProject?.name ?? 'Проекты'}
         </Button>
@@ -274,29 +313,25 @@ export function Board() {
         </Button>
       </header>
 
-      {/* Телефон — одна вертикаль, десктоп — пять колонок. */}
+      {/* Телефон — вкладки и лента с одной колонкой на экран, десктоп — сетка из пяти. */}
       <DndContext
         sensors={sensors}
         onDragStart={e => setActiveId(e.active.id as string)}
         onDragEnd={onDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="grid gap-3 md:grid-cols-5">
-          {COLUMNS.map(col => (
-            <Column
-              key={col.key}
-              col={col}
-              items={items.filter(i => i.status === col.key && !i.archived_at)}
-              epics={epics}
-              allItems={items}
-              archivedCount={archivedCount}
-              onChanged={() => reload(current)}
-              onOpen={setOpenItem}
-              onOpenEpic={id => setViewEpic(id)}
-              onShowArchive={() => setShowArchive(true)}
-            />
-          ))}
-        </div>
+        {isDesktop ? (
+          <div className="flex-1 min-h-0 grid grid-cols-5 gap-4 px-6">
+            {COLUMNS.map(col => renderColumn(col, false))}
+          </div>
+        ) : (
+          <>
+            <ColumnTabs counts={counts} active={activeColumn} onSelect={selectColumn} />
+            <Lane active={STATUS_ORDER.indexOf(activeColumn)} onActiveChange={selectColumnIndex}>
+              {COLUMNS.map(col => renderColumn(col, true))}
+            </Lane>
+          </>
+        )}
         <DragOverlay>
           {activeItem && <CardPreview item={activeItem} />}
         </DragOverlay>
