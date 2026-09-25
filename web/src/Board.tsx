@@ -62,7 +62,7 @@ export function Board() {
 
   const reload = async (project: string) => {
     if (!project) return;
-    const { data, error } = await sb.from('items').select('*')
+    const { data, error } = await sb.from('items').select('*, comments(count)')
       .eq('project_id', project)
       .order('position');
     // Пока ждали ответ, могли переключиться на другой проект — тогда
