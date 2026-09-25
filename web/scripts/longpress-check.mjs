@@ -40,8 +40,32 @@ await page.waitForTimeout(700);
 await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 await page.waitForTimeout(500);
 
+// Меню проверяем сразу после отпускания, ДО синтетического клика ниже:
+// клик по карточке приходится не на содержимое меню (оно в портале в
+// стороне), а Radix закрывает меню по «внешнему» pointerdown — то есть
+// собственный клик его сам погасит, и после него menu.isVisible() уже
+// ничего не докажет.
 const menu = await page.getByRole('menu').isVisible();
 const openItem = await page.getByRole('menuitem', { name: 'Открыть' }).isVisible();
+
+// `Input.dispatchTouchEvent` в headless Chromium НЕ порождает следующий за
+// touchend синтетический click, который шлёт настоящий телефон/браузер —
+// без этого шага таск всегда остаётся закрытой и проверка ничего не ловит
+// (это и было причиной находки: consumeClick() можно было выпилить, а
+// скрипт всё равно печатал OK). Досылаем этот клик вручную.
+//
+// Координатный клик (Input.dispatchMouseEvent / page.mouse.click) тут не
+// годится: пока меню открыто, Radix ставит карточке под меню
+// `body { pointer-events: none }`, и клик по координате бьёт мимо (его
+// ловит <html>). На настоящем телефоне это не мешает — спецификация Touch
+// Events закрепляет цель клика после touchend за тем же элементом, что
+// получил touchstart, независимо от того, что творится с pointer-events
+// к моменту отпускания пальца. Поэтому шлём click прямо в DOM-узел
+// карточки — это и есть то самое событие, которое должен проглотить
+// consumeClick() из useLongPress.ts.
+await card.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })));
+await page.waitForTimeout(300);
+
 const taskOpened = await page.getByPlaceholder('комментарий').isVisible().catch(() => false);
 console.log({ menu, openItem, taskOpened });
 await browser.close();
