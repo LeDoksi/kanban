@@ -24,6 +24,8 @@
   --color-danger: #c0392b;
   --color-overlay: rgb(29 34 38 / 0.40);
   --color-shadow: rgb(40 50 60 / 0.08);
+  /* Мягкая подложка под группой эпика (KAN-125) — едва заметнее фона. */
+  --color-group: rgb(29 34 38 / 0.045);
 
   /* Карточки без рамок: объект от фона отделяет тень в тон фона. */
   --shadow-card: 0 1px 2px var(--color-shadow), 0 4px 14px -6px var(--color-shadow);
@@ -64,6 +66,7 @@
     --color-danger: #f07a6c;
     --color-overlay: rgb(0 0 0 / 0.60);
     --color-shadow: rgb(0 0 0 / 0.45);
+    --color-group: rgb(255 255 255 / 0.035);
   }
 }
 
@@ -94,3 +97,27 @@ body {
 
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* KAN-124: колонки скроллятся внутри себя, и системный толстый скроллбар
+   на десктопе бросается в глаза сильнее содержимого. Прозрачный трек
+   вместо none — полоса не исчезает совсем, а проявляется на hover. */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.thin-scroll:hover {
+  scrollbar-color: var(--color-line) transparent;
+}
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+.thin-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+}
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}

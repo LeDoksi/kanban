@@ -28,7 +28,11 @@ export function StatusMenu(
       {/* Триггер — кнопка «⋯» в углу карточки. На мыши видна при наведении
           и фокусе; на сенсорных экранах невидима и не ловит касания, но
           остаётся в раскладке: меню, открытое долгим нажатием, якорится
-          к ней. display:none дал бы нулевой прямоугольник в (0,0). */}
+          к ней. display:none дал бы нулевой прямоугольник в (0,0).
+          KAN-123: data-[state=open]/group-focus-within показывали её и на
+          тач-экранах, когда открытое долгим нажатием меню фокусировало
+          дерево карточки — [@media(hover:none)]:opacity-0! перебивает их
+          важностью независимо от порядка классов. */}
       <Menu.Trigger asChild>
         <button
           aria-label="Действия с задачей"
@@ -39,7 +43,8 @@ export function StatusMenu(
                      text-(--color-muted) hover:bg-(--color-raised) hover:text-(--color-ink)
                      opacity-0 group-hover:opacity-100 focus-visible:opacity-100
                      group-focus-within:opacity-100 data-[state=open]:opacity-100
-                     [@media(hover:none)]:pointer-events-none"
+                     [@media(hover:none)]:pointer-events-none
+                     [@media(hover:none)]:opacity-0!"
         >
           <DotsThree size={18} weight="bold" />
         </button>
@@ -53,7 +58,9 @@ export function StatusMenu(
           onMouseDown={stop}
           onPointerDown={stop}
           onTouchStart={stop}
-          className="z-50 min-w-56 rounded-2xl bg-(--color-surface) shadow-menu p-1.5"
+          // KAN-122: меню открывается под ещё нажатым пальцем — без
+          // no-callout это выделяет текст пунктов меню как текст страницы.
+          className="z-50 min-w-56 rounded-2xl bg-(--color-surface) shadow-menu p-1.5 no-callout"
         >
           {COLUMNS.map(c => {
             const Icon = STATUS_ICON[c.key];

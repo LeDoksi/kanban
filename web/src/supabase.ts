@@ -13,6 +13,10 @@ export type Item = {
   status: 'backlog' | 'hold' | 'doing' | 'waiting' | 'done';
   checklist: Check[]; blocks: string[]; position: number;
   closed_at: string | null; archived_at: string | null;
+  // Встроенный счётчик PostgREST: select('*, comments(count)') отдаёт
+  // [{ count: N }]. Необязательный — другие запросы (эпик, архив)
+  // выбирают '*' без него.
+  comments?: { count: number }[];
 };
 
 export type Comment = {

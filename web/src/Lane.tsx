@@ -6,8 +6,8 @@ import { settleIndex } from './lane';
 // (scroll-snap), своих обработчиков жеста нет — поэтому она не спорит с
 // вертикальной прокруткой колонок.
 export function Lane(
-  { active, onActiveChange, children }: {
-    active: number; onActiveChange: (i: number) => void; children: ReactNode;
+  { active, onActiveChange, ready, children }: {
+    active: number; onActiveChange: (i: number) => void; ready: boolean; children: ReactNode;
   },
 ) {
   const ref = useRef<HTMLDivElement>(null);
@@ -15,6 +15,10 @@ export function Lane(
   activeRef.current = active;
   const mounted = useRef(false);
   const reduce = useReducedMotion();
+  // Цель программной прокрутки (тап по вкладке, восстановление после
+  // загрузки) — чтобы её собственный scrollend не записался в lastColumn
+  // как будто колонку выбрал пользователь свайпом.
+  const programmatic = useRef<number | null>(null);
 
   const step = () => {
     const el = ref.current;
@@ -29,7 +33,12 @@ export function Lane(
     if (!el) return;
     const settle = () => {
       const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
-      onActiveChange(settleIndex(el.scrollLeft, step(), el.children.length, atEnd, activeRef.current));
+      const computed = settleIndex(el.scrollLeft, step(), el.children.length, atEnd, activeRef.current);
+      if (programmatic.current !== null && computed === programmatic.current) {
+        programmatic.current = null;
+        return;
+      }
+      onActiveChange(computed);
     };
     if ('onscrollend' in window) {
       el.addEventListener('scrollend', settle);
@@ -46,16 +55,20 @@ export function Lane(
   }, [onActiveChange]);
 
   // Активная вкладка → прокрутка. Первый раз без анимации: открываемся
-  // сразу на сохранённой колонке.
+  // сразу на сохранённой колонке. Пока задачи ещё не загрузились (!ready),
+  // стартовая колонка может дважды поменяться (пустой список → реальный
+  // startColumn) — до готовности едем instant и не считаем это выбором
+  // пользователя.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const left = active * step();
     if (Math.abs(el.scrollLeft - left) > 2) {
-      el.scrollTo({ left, behavior: mounted.current && !reduce ? 'smooth' : 'instant' });
+      programmatic.current = active;
+      el.scrollTo({ left, behavior: mounted.current && ready && !reduce ? 'smooth' : 'instant' });
     }
-    mounted.current = true;
-  }, [active, reduce]);
+    if (ready) mounted.current = true;
+  }, [active, ready, reduce]);
 
   // Поворот или изменение ширины — вернуться точно на активную колонку.
   useEffect(() => {
@@ -75,7 +88,7 @@ export function Lane(
                  snap-x snap-mandatory scroll-px-3 px-3 no-scrollbar"
     >
       {Children.map(children, child => (
-        <div className="snap-start shrink-0 h-full w-[calc(100%-24px)] md:w-[calc(50%-12px)]">
+        <div className="snap-start shrink-0 h-full w-[calc(100%-24px)] md:w-[calc(50%-12px)] overflow-x-clip">
           {child}
         </div>
       ))}

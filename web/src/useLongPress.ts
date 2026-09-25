@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { LONG_PRESS_MS, movedTooFar } from './longpress';
 
 export function useLongPress(onFire: () => void) {
@@ -7,6 +7,10 @@ export function useLongPress(onFire: () => void) {
   // После срабатывания браузер всё равно пришлёт click при отпускании
   // пальца — его надо проглотить, иначе вместе с меню откроется задача.
   const fired = useRef(false);
+
+  // Карточка может исчезнуть посреди нажатия (realtime-перезагрузка) —
+  // таймер не должен потом вибрировать и дёргать состояние.
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   const cancel = () => {
     clearTimeout(timer.current);
