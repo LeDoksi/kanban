@@ -295,7 +295,12 @@ export function Board() {
   );
 
   return (
-    <div className="h-dvh flex flex-col max-w-[1440px] mx-auto">
+    // board-no-select (KAN-122): на тач-устройствах во время удержания карточки
+    // Radix ставит body pointer-events:none, и жест выделения уходит с карточки
+    // на любой текст доски — вкладки, заголовки колонок, названия карточек.
+    // Шторки с описанием задачи/эпика портальны и вне .board-no-select, текст
+    // там остаётся выделяемым.
+    <div className="h-dvh flex flex-col max-w-[1440px] mx-auto board-no-select">
       <BoardHeader
         project={currentProject}
         done={items.filter(i => i.status === 'done').length}

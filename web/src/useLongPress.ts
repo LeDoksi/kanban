@@ -26,6 +26,9 @@ export function useLongPress(onFire: () => void) {
         timer.current = setTimeout(() => {
           fired.current = true;
           navigator.vibrate?.(10);
+          // Палец успел начать выделение текста до срабатывания меню —
+          // сбрасываем его, иначе оно останется висеть под модалкой (KAN-122).
+          window.getSelection()?.removeAllRanges();
           onFire();
         }, LONG_PRESS_MS);
       },
