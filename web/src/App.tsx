@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { MotionConfig } from 'motion/react';
 import { sb } from './supabase';
 import { Board } from './Board';
 import { Button } from './ui/Button';
@@ -20,10 +21,13 @@ export function App() {
 
   if (!ready) return null;
   return (
-    <>
+    // reducedMotion="user" — единая точка: все motion-компоненты дерева
+    // (включая Toaster) сами уважают prefers-reduced-motion, без
+    // проверки в каждом из них по отдельности.
+    <MotionConfig reducedMotion="user">
       {session ? <Board /> : <SignIn />}
       <Toaster />
-    </>
+    </MotionConfig>
   );
 }
 
