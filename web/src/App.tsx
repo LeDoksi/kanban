@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { sb } from './supabase';
 import { Board } from './Board';
 import { Button } from './ui/Button';
+import { Toaster } from './ui/Toaster';
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -18,8 +19,12 @@ export function App() {
   }, []);
 
   if (!ready) return null;
-  if (!session) return <SignIn />;
-  return <Board />;
+  return (
+    <>
+      {session ? <Board /> : <SignIn />}
+      <Toaster />
+    </>
+  );
 }
 
 function SignIn() {

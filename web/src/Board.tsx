@@ -23,6 +23,7 @@ import { TypeBadge } from './ui/TypeBadge';
 import { Button } from './ui/Button';
 import { AnimatePresence, motion } from 'motion/react';
 import { panelClass } from './ui/panel';
+import { toasts } from './ui/toast';
 
 const COLUMNS = [
   { key: 'hold',    label: 'Hold' },
@@ -37,7 +38,6 @@ export function Board() {
   const [current, setCurrent] = useState<string>('');
   const [items, setItems] = useState<Item[]>([]);
   const [epics, setEpics] = useState<Epic[]>([]);
-  const [err, setErr] = useState('');
   const [openItem, setOpenItem] = useState<Item | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -49,24 +49,12 @@ export function Board() {
   // местом, ни над чужой колонкой — только над существующими карточками.
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Ошибка держится на экране гарантированные несколько секунд, а не до
-  // ближайшего фонового reload() — иначе Realtime мог погасить её раньше,
-  // чем её успели прочитать.
-  useEffect(() => {
-    if (!err) return;
-    const t = setTimeout(() => setErr(''), 4000);
-    return () => clearTimeout(t);
-  }, [err]);
-
-  // Realtime дёргает reload() на любое изменение — если он гасит err
-  // сразу же, сообщение об ошибке живёт меньше секунды. Очищаем err
-  // отдельным таймером (ниже), а не тут.
   const reload = async (project: string) => {
     if (!project) return;
     const { data, error } = await sb.from('items').select('*')
       .eq('project_id', project)
       .order('position');
-    if (error) { setErr(error.message); return; }
+    if (error) { toasts.show(error.message); return; }
     const list = (data ?? []) as Item[];
     setItems(list);
     setOpenItem(prev => prev ? (list.find(i => i.id === prev.id) ?? prev) : null);
@@ -76,7 +64,7 @@ export function Board() {
     if (!project) return;
     const { data, error } = await sb.from('epics').select('*')
       .eq('project_id', project).order('position');
-    if (error) { setErr(error.message); return; }
+    if (error) { toasts.show(error.message); return; }
     setEpics((data ?? []) as Epic[]);
   };
 
@@ -88,13 +76,13 @@ export function Board() {
       sb.from('projects').select('*').is('archived_at', null).order('position'),
       sb.from('items').select('project_id, status, archived_at'),
     ]);
-    if (error) { setErr(error.message); return; }
+    if (error) { toasts.show(error.message); return; }
     const ps = (data ?? []) as Project[];
     setProjects(ps);
     if (!keepCurrent && ps.length) setCurrent(ps[0].id);
     if (keepCurrent && !current && ps.length) setCurrent(ps[0].id);
 
-    if (iErr) { setErr(iErr.message); return; }
+    if (iErr) { toasts.show(iErr.message); return; }
     const all = allItems ?? [];
     setProjectRows(ps.map(project => {
       const mine = all.filter(i => i.project_id === project.id);
@@ -128,7 +116,7 @@ export function Board() {
     if (!currentProject || clean === currentProject.description) return;
     const { error } = await sb.from('projects')
       .update({ description: clean }).eq('id', current);
-    if (error) { setErr(error.message); return; }
+    if (error) { toasts.show(error.message); return; }
     reloadProjects();
   };
 
@@ -253,7 +241,7 @@ export function Board() {
     setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...patch } : i));
 
     const { error } = await sb.from('items').update(patch).eq('id', itemId);
-    if (error) { setErr(error.message); reload(current); return; }
+    if (error) { toasts.show(error.message); reload(current); return; }
     reload(current);
   };
 
@@ -285,7 +273,6 @@ export function Board() {
             </Editable>
           )
         )}
-        {err && <span className="text-body text-(--color-danger)">{err}</span>}
         <span className="text-body text-(--color-muted)">
           {items.filter(i => i.status === 'done').length}/{items.length}
         </span>
@@ -311,7 +298,7 @@ export function Board() {
               allItems={items}
               archivedCount={archivedCount}
               onChanged={() => reload(current)}
-              onError={setErr}
+              onError={msg => toasts.show(msg)}
               onOpen={setOpenItem}
               onOpenEpic={id => setViewEpic(id)}
               onShowArchive={() => setShowArchive(true)}
@@ -346,7 +333,7 @@ export function Board() {
             onRestore={async i => {
               const { error } = await sb.from('items')
                 .update({ status: 'doing', archived_at: null }).eq('id', i.id);
-              if (error) { setErr(error.message); return; }
+              if (error) { toasts.show(error.message); return; }
               reload(current);
             }}
             onClose={() => setShowArchive(false)}
