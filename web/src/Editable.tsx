@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 // input/textarea (TaskModal, EpicModal, шапка доски).
 export function Editable(
   { as: Tag = 'span', onEdit, className, children }: {
-    as?: 'span' | 'h1' | 'h2' | 'p';
+    as?: 'span' | 'h1' | 'h2' | 'p' | 'div';
     onEdit: () => void;
     className?: string;
     children: ReactNode;

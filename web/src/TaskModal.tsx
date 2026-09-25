@@ -6,6 +6,8 @@ import { selectableEpics } from './epics';
 import { Editable } from './Editable';
 import { Sheet } from './ui/Sheet';
 import { Button } from './ui/Button';
+import { Markdown } from './ui/Markdown';
+import { relTime } from './time';
 
 const STATUS_LABEL: Record<Item['status'], string> = {
   backlog: 'Backlog', hold: 'Hold', doing: 'В работе',
@@ -242,15 +244,21 @@ export function TaskModal(
                      border border-(--color-line) outline-none resize-none
                      focus:border-(--color-accent)"
         />
+      ) : item.body ? (
+        <Editable
+          as="div"
+          onEdit={() => setEditingBody(true)}
+          className="text-body mb-4 cursor-text min-h-[1.5em]"
+        >
+          <Markdown text={item.body} />
+        </Editable>
       ) : (
         <Editable
           as="p"
           onEdit={() => setEditingBody(true)}
-          className="text-body whitespace-pre-wrap mb-4 cursor-text min-h-[1.5em]"
+          className="text-body mb-4 cursor-text min-h-[1.5em]"
         >
-          {item.body || (
-            <span className="text-(--color-muted)">описание — клик, чтобы добавить</span>
-          )}
+          <span className="text-(--color-muted)">описание — клик, чтобы добавить</span>
         </Editable>
       )}
 
@@ -283,9 +291,9 @@ export function TaskModal(
             {comments.map(c => (
               <div key={c.id} className="text-meta">
                 <span className="text-(--color-muted)">
-                  {c.created_at.slice(0, 10)} {c.author}:
+                  {relTime(c.created_at, new Date())} {c.author}:
                 </span>{' '}
-                {c.body}
+                <Markdown text={c.body} className="inline" />
               </div>
             ))}
           </div>

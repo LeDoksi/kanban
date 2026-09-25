@@ -121,3 +121,12 @@ body {
 .thin-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
 }
+
+/* Markdown из описаний и комментариев: компактно, в шкале приложения. */
+.md > * + * { margin-top: 0.5em; }
+.md ul, .md ol { padding-left: 1.25em; list-style: revert; }
+.md code { font-size: 0.9em; padding: 0.1em 0.35em; border-radius: 6px; background: var(--color-raised); }
+.md pre { padding: 0.75em; border-radius: 12px; background: var(--color-raised); overflow-x: auto; }
+.md pre code { padding: 0; background: none; }
+.md a { color: var(--color-accent-ink); text-decoration: underline; }
+.md h1, .md h2, .md h3 { font-weight: 600; }
