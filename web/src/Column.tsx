@@ -45,7 +45,7 @@ export function Column(
           {full.length > 0 && <span className="text-micro">{full.length}</span>}
         </h2>
       )}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pb-28 lg:pb-6 -mx-1 px-1 pt-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pb-28 lg:pb-6 -mx-1 px-1 pt-1 thin-scroll">
         {loading ? (
           <div className="space-y-2">
             <CardSkeleton /><CardSkeleton /><CardSkeleton />

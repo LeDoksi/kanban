@@ -94,3 +94,27 @@ body {
 
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* KAN-124: колонки скроллятся внутри себя, и системный толстый скроллбар
+   на десктопе бросается в глаза сильнее содержимого. Прозрачный трек
+   вместо none — полоса не исчезает совсем, а проявляется на hover. */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.thin-scroll:hover {
+  scrollbar-color: var(--color-line) transparent;
+}
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+.thin-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+}
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
