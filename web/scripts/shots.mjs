@@ -45,12 +45,16 @@ function rows(url) {
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 
-async function open({ width, height, dark, mobile }) {
+async function open({ width, height, dark, mobile, signedIn = true }) {
   const ctx = await browser.newContext({
     viewport: { width, height }, deviceScaleFactor: 2,
     colorScheme: dark ? 'dark' : 'light', isMobile: !!mobile, hasTouch: !!mobile,
   });
-  await ctx.addInitScript(s => localStorage.setItem('sb-fake-auth-token', JSON.stringify(s)), session);
+  // Экран входа: тот же контекст, но без фейковой сессии в localStorage —
+  // sb.auth.getSession() тогда возвращает null и App() рисует SignIn.
+  if (signedIn) {
+    await ctx.addInitScript(s => localStorage.setItem('sb-fake-auth-token', JSON.stringify(s)), session);
+  }
   await ctx.route('https://fake.supabase.co/**', route => {
     const req = route.request();
     if (req.url().includes('/rest/v1/') && req.method() === 'GET') {
@@ -108,6 +112,18 @@ for (const [vp, opt] of Object.entries(viewports)) {
     await page.screenshot({ path: `${out}${tag}-epic.png` });
     await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
+    // Архив: кнопка «Архив · N» в колонке «Готово». На телефоне колонки —
+    // вкладки, сначала переключаемся на «Готово», на десктопе она уже
+    // видна в сетке.
+    if (vp === 'phone') {
+      await page.getByRole('tab', { name: /Готово/ }).click();
+      await page.waitForTimeout(400);
+    }
+    await page.getByRole('button', { name: /Архив ·/ }).click();
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: `${out}${tag}-archive.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
     await ctx.close();
   }
 }
@@ -117,6 +133,17 @@ for (const [vp, opt] of Object.entries(viewports)) {
   await switchTo(page, 'Кофейня');
   await page.screenshot({ path: `${out}desktop-light-empty.png` });
   await ctx.close();
+}
+
+// Экран входа: без фейковой сессии, контекст без sb-fake-auth-token.
+for (const [vp, opt] of Object.entries(viewports)) {
+  for (const dark of [false, true]) {
+    const tag = `${vp}-${dark ? 'dark' : 'light'}`;
+    const { ctx, page } = await open({ ...opt, dark, signedIn: false });
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${out}${tag}-signin.png` });
+    await ctx.close();
+  }
 }
 
 await browser.close();

@@ -95,6 +95,23 @@ body {
   user-select: none;
 }
 
+/* KAN-122: на тач-устройствах долгое нажатие на карточку не должно выделять
+   остальной текст доски (вкладки, заголовки, другие карточки) — палец всё ещё
+   удерживает экран, пока открыто меню Radix, и жест выделения расползается.
+   Поля ввода — исключение, иначе не выделить текст в самой доске (если он
+   там есть), а шторки задач/эпиков в этот класс не попадают вовсе. */
+@media (pointer: coarse) {
+  .board-no-select, .board-no-select * {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .board-no-select input, .board-no-select textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 

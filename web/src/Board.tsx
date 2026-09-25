@@ -124,10 +124,23 @@ export function Board() {
 
   const currentProject = projects.find(p => p.id === current) ?? null;
 
-  const saveDescription = async (description: string | null) => {
-    const { error } = await sb.from('projects').update({ description }).eq('id', current);
+  const saveProjectDescription = async (id: string, description: string | null) => {
+    const { error } = await sb.from('projects').update({ description }).eq('id', id);
     if (error) { toasts.show(error.message); return; }
     reloadProjects();
+  };
+
+  const archiveProject = async (id: string) => {
+    const { error } = await sb.from('projects').update({ archived_at: new Date().toISOString() }).eq('id', id);
+    if (error) { toasts.show(error.message); return; }
+    if (id === current) {
+      // Текущий проект ушёл в архив — переключаемся на другой (pickProject
+      // в reloadProjects сам выберет первый доступный).
+      setCurrent('');
+      reloadProjects(false);
+    } else {
+      reloadProjects();
+    }
   };
 
   useEffect(() => {
@@ -282,14 +295,19 @@ export function Board() {
   );
 
   return (
-    <div className="h-dvh flex flex-col max-w-[1440px] mx-auto">
+    // board-no-select (KAN-122): на тач-устройствах во время удержания карточки
+    // Radix ставит body pointer-events:none, и жест выделения уходит с карточки
+    // на любой текст доски — вкладки, заголовки колонок, названия карточек.
+    // Шторки с описанием задачи/эпика портальны и вне .board-no-select, текст
+    // там остаётся выделяемым.
+    <div className="h-dvh flex flex-col max-w-[1440px] mx-auto board-no-select">
       <BoardHeader
         project={currentProject}
         done={items.filter(i => i.status === 'done').length}
         total={items.length}
         onOpenProjects={() => setShowProjects(true)}
         onCreate={() => setShowCreate(true)}
-        onSaveDescription={saveDescription}
+        onSaveDescription={text => saveProjectDescription(current, text)}
       />
 
       {/* Телефон — вкладки и лента с одной колонкой на экран, десктоп — сетка из пяти. */}
@@ -377,6 +395,8 @@ export function Board() {
             current={current}
             rows={projectRows}
             onSelect={id => { setCurrent(id); reloadProjects(); }}
+            onSaveDescription={saveProjectDescription}
+            onArchive={archiveProject}
             onClose={() => setShowProjects(false)}
           />
         )}
