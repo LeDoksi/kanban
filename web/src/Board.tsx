@@ -3,9 +3,7 @@ import {
   DndContext, DragOverlay, type DragEndEvent,
   MouseSensor, useSensor, useSensors,
 } from '@dnd-kit/core';
-import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { sb, setStatus, closedAtFor } from './supabase';
+import { sb, closedAtFor } from './supabase';
 import type { Item, Project } from './supabase';
 import { CreateModal } from './CreateModal';
 import { TaskModal } from './TaskModal';
@@ -14,18 +12,15 @@ import { EpicModal } from './EpicModal';
 import { ProjectDrawer, type ProjectRow } from './ProjectDrawer';
 import { Editable } from './Editable';
 import { between } from './position';
-import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
-import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
-import { swipeTarget, swipePreview, lockAxis, SWIPE_THRESHOLD } from './swipe';
+import { shownDoneIds } from './done';
 import type { Epic } from './supabase';
-import { ArrowLeft, ArrowRight } from '@phosphor-icons/react';
-import { TypeBadge } from './ui/TypeBadge';
 import { Button } from './ui/Button';
-import { AnimatePresence, motion } from 'motion/react';
-import { panelClass } from './ui/panel';
+import { AnimatePresence } from 'motion/react';
 import { toasts } from './ui/toast';
 import { COLUMNS } from './columns';
 import { storage, readLastProject, writeLastProject, pickProject } from './prefs';
+import { CardPreview } from './Card';
+import { Column } from './Column';
 
 export function Board() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -377,245 +372,3 @@ export function Board() {
   );
 }
 
-function Column(
-  { col, items, epics, allItems, archivedCount, onChanged, onError, onOpen, onOpenEpic, onShowArchive }: {
-    col: typeof COLUMNS[number]; items: Item[]; epics: Epic[]; allItems: Item[];
-    archivedCount: number;
-    onChanged: () => void; onError: (msg: string) => void;
-    onOpen: (item: Item) => void; onOpenEpic: (epicId: string) => void;
-    onShowArchive: () => void;
-  },
-) {
-  const { setNodeRef } = useDroppable({ id: col.key });
-
-  // «Готово» — единственная колонка, которая обрезается: открытые задачи
-  // не должны прятаться, а закрытых со временем становится много.
-  // items уже отфильтрованы до status===col.key && !archived_at в Board —
-  // recentDone() лишь досортирует по дате закрытия. Группировка по эпику —
-  // уже поверх этого обрезанного списка, кап не меняется.
-  const capped = col.key === 'done';
-  const full = capped ? recentDone(items) : items;
-  const list = capped ? full.slice(0, DONE_SHOWN) : full;
-  const hiddenDone = capped ? full.length - list.length : 0;
-
-  const groups = groupItemsByEpic(list, epics);
-  const groupedIds = new Set(groups.flatMap(g => g.items.map(i => i.id)));
-  const ungrouped = list.filter(i => !groupedIds.has(i.id));
-  // Пустые эпики (ни одной задачи вообще) торчат только в Backlog —
-  // это их «домашняя» колонка, иначе эпик без задач нигде не виден.
-  const pinnedEmpty = col.key === 'backlog' ? emptyEpics(epics, allItems) : [];
-
-  return (
-    <section
-      ref={setNodeRef}
-      className="rounded-lg border border-(--color-line) p-2"
-    >
-      <h2 className="text-meta text-(--color-muted) mb-2 px-1 flex items-center gap-1.5
-                     sticky top-0 bg-(--color-ground) py-1 z-10">
-        {col.label}
-        {full.length > 0 && (
-          <span className="text-micro px-1.5 rounded-full bg-(--color-raised)">
-            {full.length}
-          </span>
-        )}
-      </h2>
-      <SortableContext
-        items={[...groups.flatMap(g => g.items), ...ungrouped].map(i => i.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div className="space-y-3">
-          {groups.map(({ epic, items: epicItems }) => (
-            // Рамка вокруг всей группы — иначе не видно, где кончаются
-            // задачи эпика и начинаются несвязанные (выглядели одинаково,
-            // отличаясь только подписью сверху).
-            <div key={epic.id} className="rounded-lg border border-(--color-line) p-1.5">
-              <button
-                onClick={() => onOpenEpic(epic.id)}
-                className="text-micro text-(--color-muted) hover:text-(--color-ink) underline mb-1 px-1 block"
-              >
-                {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
-              </button>
-              <div className="space-y-2">
-                {epicItems.map(i => (
-                  <Card key={i.id} item={i} onChanged={onChanged} onError={onError} onOpen={onOpen} />
-                ))}
-              </div>
-            </div>
-          ))}
-          {pinnedEmpty.map(epic => (
-            <button
-              key={epic.id}
-              onClick={() => onOpenEpic(epic.id)}
-              className="text-micro text-(--color-muted) hover:text-(--color-ink) underline px-1 block"
-            >
-              {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
-            </button>
-          ))}
-          {ungrouped.length > 0 && (
-            <div className="space-y-2">
-              {ungrouped.map(i => (
-                <Card key={i.id} item={i} onChanged={onChanged} onError={onError} onOpen={onOpen} />
-              ))}
-            </div>
-          )}
-        </div>
-      </SortableContext>
-      {capped && (hiddenDone > 0 || archivedCount > 0) && (
-        <button
-          onClick={onShowArchive}
-          className="text-meta text-(--color-muted) hover:text-(--color-ink) mt-2 px-1"
-        >
-          ещё {hiddenDone + archivedCount} · архив
-        </button>
-      )}
-    </section>
-  );
-}
-
-// Плывущий клон под курсором во время drag — не подписан на useSortable
-// (это делает DragOverlay сам), поэтому просто статичная разметка без
-// обработчиков.
-function CardPreview({ item }: { item: Item }) {
-  const waiting = item.status === 'waiting';
-  return (
-    <article className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-body shadow-lg rotate-1')}>
-      <div className="flex items-center gap-1.5 mb-1">
-        <span className={`text-micro font-mono ${
-          waiting ? 'text-(--color-accent-ink)' : 'text-(--color-muted)'
-        }`}>
-          {item.seq}
-        </span>
-        <TypeBadge type={item.type} />
-      </div>
-      <p className={waiting ? 'text-(--color-accent-ink)' : ''}>{item.title}</p>
-    </article>
-  );
-}
-
-function Card(
-  { item, onChanged, onError, onOpen }: {
-    item: Item; onChanged: () => void; onError: (msg: string) => void;
-    onOpen: (item: Item) => void;
-  },
-) {
-  const done = item.checklist.filter(s => s.done).length;
-  const waiting = item.status === 'waiting';
-  // transition: null — как в официальном примере dnd-kit + Framer Motion:
-  // dnd-kit больше не пишет свой CSS-transition, всю анимацию позиции
-  // (в т.ч. после onDragEnd/reload(), когда сам dnd-kit уже молчит) ведёт
-  // motion через layoutId.
-  const { listeners, setNodeRef, transform, isDragging } =
-    useSortable({ id: item.id, transition: null });
-
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [axis, setAxis] = useState<'x' | 'y' | null>(null);
-  const [dragX, setDragX] = useState(0);
-  const swiping = touchStart !== null;
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-    setAxis(null);
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStart === null || axis === 'y') return;
-    const dx = e.touches[0].clientX - touchStart.x;
-    const dy = e.touches[0].clientY - touchStart.y;
-    const locked = axis ?? lockAxis(dx, dy);
-    if (locked !== axis) setAxis(locked);
-    if (locked === 'x') setDragX(dx);
-  };
-  const resetTouch = () => {
-    setTouchStart(null);
-    setAxis(null);
-    setDragX(0);
-  };
-  const onTouchEnd = () => {
-    if (axis === 'x' && target) move(target);
-    resetTouch();
-  };
-
-  // target — с порогом, решает, что случится на onTouchEnd. preview —
-  // без порога, только для панели: та открывается с первого пикселя
-  // свайпа, а не выстреливает внезапно после срабатывания.
-  const target = swipeTarget(item.status, dragX);
-  const preview = swipePreview(item.status, dragX);
-  const committed = Math.abs(dragX) > SWIPE_THRESHOLD;
-
-  const move = async (status: Item['status']) => {
-    const { error } = await setStatus(item.id, status);
-    // Молчаливый отказ выглядел бы как «карточка сама вернулась назад».
-    if (error) { onError(error.message); return; }
-    onChanged();
-  };
-
-  return (
-    // Панель со следующим статусом лежит позади карточки и открывается
-    // по мере сдвига — раньше подсказка была приклеена к самой карточке
-    // и уезжала с ней к краю экрана, толком не успевая показаться.
-    <div className="relative">
-      {preview && (
-        <div
-          aria-hidden
-          className={`absolute inset-0 rounded-lg flex items-center gap-1.5 px-3
-                     text-body font-medium overflow-hidden ${
-            dragX > 0 ? 'justify-start' : 'justify-end'
-          } ${
-            committed
-              ? 'bg-(--color-ink) text-(--color-ground)'
-              : 'bg-(--color-raised) text-(--color-muted)'
-          }`}
-        >
-          {dragX > 0 ? <ArrowRight size={16} /> : <ArrowLeft size={16} />}
-          <span>{COLUMNS.find(c => c.key === preview)?.label}</span>
-        </div>
-      )}
-      <motion.article
-        ref={setNodeRef}
-        layoutId={item.id}
-        role="button"
-        tabIndex={0}
-        onKeyDown={e => {
-          if (e.target !== e.currentTarget) return;
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); }
-        }}
-        animate={{
-          x: transform?.x ?? 0,
-          y: transform?.y ?? 0,
-          zIndex: isDragging ? 10 : 0,
-          opacity: isDragging ? 0.5 : 1,
-        }}
-        transition={{ duration: isDragging ? 0 : 0.2, ease: 'easeOut' }}
-        {...listeners}
-        onClick={() => onOpen(item)}
-        className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-body cursor-grab')}
-      >
-        <motion.div
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          onTouchCancel={resetTouch}
-          animate={{ x: dragX }}
-          transition={swiping ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 32 }}
-          className="touch-pan-y"
-        >
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className={`text-micro font-mono ${
-              waiting ? 'text-(--color-accent-ink)' : 'text-(--color-muted)'
-            }`}>
-              {item.seq}
-            </span>
-            <TypeBadge type={item.type} />
-          </div>
-
-          <p className={waiting ? 'text-(--color-accent-ink)' : ''}>{item.title}</p>
-
-          {item.checklist.length > 0 && (
-            <p className="text-micro text-(--color-muted) mt-1.5">
-              {done}/{item.checklist.length}
-            </p>
-          )}
-        </motion.div>
-      </motion.article>
-    </div>
-  );
-}
