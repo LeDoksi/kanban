@@ -7,14 +7,19 @@ export function ProgressRing(
 ) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
+  const dash = ringDash(done, total, c);
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="shrink-0 -rotate-90">
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-line)" strokeWidth={stroke} />
-      <circle
-        cx={size / 2} cy={size / 2} r={r} fill="none"
-        stroke="var(--color-accent)" strokeWidth={stroke} strokeLinecap="round"
-        strokeDasharray={`${ringDash(done, total, c)} ${c}`}
-      />
+      {/* Круг accent рендерится только если есть прогресс, чтобы избежать точки
+          на нулевом прогрессе из-за strokeLinecap="round" */}
+      {dash > 0 && (
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none"
+          stroke="var(--color-accent)" strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={`${dash} ${c}`}
+        />
+      )}
     </svg>
   );
 }
