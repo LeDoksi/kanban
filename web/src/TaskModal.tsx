@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as Menu from '@radix-ui/react-dropdown-menu';
 import { sb, setStatus } from './supabase';
 import type { Item, Comment, Epic } from './supabase';
 import { selectableEpics } from './epics';
@@ -11,8 +12,10 @@ import { relTime, fullDate } from './time';
 import { toasts } from './ui/toast';
 import { COLUMNS } from './columns';
 import { STATUS_ICON } from './statusIcons';
+import { confirmStep } from './deleteConfirm';
 import {
   CheckSquare, Bug, Wrench, ArrowSquareOut, CheckCircle, Circle, PaperPlaneRight,
+  DotsThree, Archive, ArrowCounterClockwise, Trash,
 } from '@phosphor-icons/react';
 
 export function TaskModal(
@@ -269,7 +272,52 @@ export function TaskModal(
   );
 }
 
-// Заглушка до Task 12: меню действий появится позже.
-function TaskActions(_props: { item: Item; onChanged: () => void; onClose: () => void }) {
-  return null;
+function TaskActions({ item, onChanged, onClose }: { item: Item; onChanged: () => void; onClose: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<'idle' | 'confirm'>('idle');
+
+  const run = async (patch: Partial<Item>) => {
+    const { error } = await sb.from('items').update(patch).eq('id', item.id);
+    if (error) { toasts.show(error.message); return; }
+    onChanged();
+  };
+
+  const onDelete = async (e: Event) => {
+    const next = confirmStep(step, 'delete');
+    setStep(next.state);
+    // Первый шаг не закрывает меню — пункт меняется на подтверждение.
+    if (!next.perform) { e.preventDefault(); return; }
+    const { error } = await sb.from('items').delete().eq('id', item.id);
+    if (error) { toasts.show(error.message); return; }
+    onChanged();
+    onClose();
+  };
+
+  return (
+    <Menu.Root open={open} onOpenChange={o => { setOpen(o); if (!o) setStep(confirmStep(step, 'close').state); }}>
+      <Menu.Trigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Действия с задачей"><DotsThree size={20} weight="bold" /></Button>
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Content align="end" sideOffset={6} className="z-[60] min-w-56 rounded-2xl bg-(--color-surface) shadow-menu p-1.5">
+          {item.status === 'done' && !item.archived_at && (
+            <Menu.Item onSelect={() => run({ archived_at: new Date().toISOString() })} className={itemCls}>
+              <Archive size={18} className="text-(--color-muted)" />В архив
+            </Menu.Item>
+          )}
+          {item.archived_at && (
+            <Menu.Item onSelect={() => run({ status: 'doing', archived_at: null })} className={itemCls}>
+              <ArrowCounterClockwise size={18} className="text-(--color-muted)" />Вернуть в работу
+            </Menu.Item>
+          )}
+          <Menu.Item onSelect={onDelete} className={`${itemCls} text-(--color-danger)`}>
+            <Trash size={18} />{step === 'confirm' ? 'Удалить навсегда?' : 'Удалить'}
+          </Menu.Item>
+        </Menu.Content>
+      </Menu.Portal>
+    </Menu.Root>
+  );
 }
+
+const itemCls = `flex items-center gap-2.5 h-10 px-3 rounded-xl outline-none cursor-pointer text-body
+                 data-[highlighted]:bg-(--color-raised)`;
