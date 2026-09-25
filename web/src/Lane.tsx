@@ -75,7 +75,7 @@ export function Lane(
                  snap-x snap-mandatory scroll-px-3 px-3 no-scrollbar"
     >
       {Children.map(children, child => (
-        <div className="snap-start shrink-0 h-full w-[calc(100%-24px)] md:w-[calc(50%-12px)]">
+        <div className="snap-start shrink-0 h-full w-[calc(100%-24px)] md:w-[calc(50%-12px)] overflow-x-clip">
           {child}
         </div>
       ))}

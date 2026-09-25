@@ -7,6 +7,8 @@ import { COLUMNS, EMPTY_TEXT } from './columns';
 import { Card, CardSkeleton } from './Card';
 import { STATUS_ICON } from './statusIcons';
 import { EpicGroupHeader } from './EpicGroupHeader';
+import { Archive } from '@phosphor-icons/react';
+import { Button } from './ui/Button';
 
 export function Column(
   { col, items, epics, allItems, archivedCount, onChanged, onOpen, onOpenEpic, onShowArchive, bare, loading }: {
@@ -46,7 +48,7 @@ export function Column(
           {full.length > 0 && <span className="text-micro">{full.length}</span>}
         </h2>
       )}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pb-28 lg:pb-6 -mx-1 px-1 pt-1 thin-scroll">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pb-28 lg:pb-6 px-1 pt-1 thin-scroll">
         {loading ? (
           <div className="space-y-2">
             <CardSkeleton /><CardSkeleton /><CardSkeleton />
@@ -90,12 +92,10 @@ export function Column(
           </SortableContext>
         )}
         {capped && (hiddenDone > 0 || archivedCount > 0) && (
-          <button
-            onClick={onShowArchive}
-            className="text-meta text-(--color-muted) hover:text-(--color-ink) mt-2 px-1"
-          >
-            ещё {hiddenDone + archivedCount} · архив
-          </button>
+          <Button variant="secondary" size="sm" onClick={onShowArchive} className="mt-3">
+            <Archive size={16} />
+            Архив · {hiddenDone + archivedCount}
+          </Button>
         )}
       </div>
     </section>
