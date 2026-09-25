@@ -5,6 +5,7 @@ import { sb } from './supabase';
 import { Board } from './Board';
 import { Button } from './ui/Button';
 import { Toaster } from './ui/Toaster';
+import { GoogleLogo } from '@phosphor-icons/react';
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -44,11 +45,13 @@ function SignIn() {
   };
 
   return (
-    <div className="min-h-dvh grid place-items-center p-6">
-      <div className="w-full max-w-72 space-y-3 text-center">
-        <h1 className="text-title font-medium">Канбан</h1>
+    <div className="min-h-dvh grid place-items-center p-6 bg-(--color-ground)">
+      <div className="w-full max-w-80 flex flex-col items-center gap-4 text-center">
+        <h1 className="text-title-lg">Канбан</h1>
+        <p className="text-body text-(--color-muted)">Личная доска задач по проектам</p>
         {error && <p className="text-meta text-(--color-danger)">{error}</p>}
-        <Button onClick={signIn} variant="primary" className="w-full">
+        <Button onClick={signIn} variant="primary" className="w-full justify-center h-11">
+          <GoogleLogo size={18} weight="bold" />
           Войти через Google
         </Button>
       </div>
