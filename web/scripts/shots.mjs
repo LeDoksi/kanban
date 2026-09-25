@@ -99,6 +99,15 @@ for (const [vp, opt] of Object.entries(viewports)) {
     await page.getByRole('button', { name: /Портфолио/ }).first().click();
     await page.waitForTimeout(700);
     await page.screenshot({ path: `${out}${tag}-projects.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+    // Шторка эпика: клик по шапке первой группы эпика на доске
+    // (EpicGroupHeader — кнопка с названием эпика и кольцом прогресса).
+    await page.getByRole('button', { name: /Раздел кейсов/ }).first().click();
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: `${out}${tag}-epic.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
     await ctx.close();
   }
 }
