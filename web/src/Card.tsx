@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { motion } from 'motion/react';
+import { ListChecks, CheckCircle, ChatCircle, TextAlignLeft } from '@phosphor-icons/react';
 import { sb, setStatus } from './supabase';
 import type { Item } from './supabase';
 import { columnLabel, undoPatch, type Status } from './columns';
@@ -9,6 +10,7 @@ import { StatusMenu } from './StatusMenu';
 import { toasts } from './ui/toast';
 import { panelClass } from './ui/panel';
 import { TypeBadge } from './ui/TypeBadge';
+import { cardMeta, cardTone } from './cardMeta';
 
 // Форма настоящей карточки, без шиммера: при медленной сети видно, что
 // доска грузится и какой она будет, а не пустые колонки.
@@ -22,18 +24,49 @@ export function CardSkeleton() {
   );
 }
 
+// Содержимое карточки — общее для самой карточки и её drag-превью, чтобы
+// превью под курсором выглядело ровно как то, что тащишь.
+export function CardBody({ item }: { item: Item }) {
+  const meta = cardMeta(item);
+  return (
+    <>
+      <p className={`text-body line-clamp-3 ${item.status === 'done' ? 'text-(--color-ink-2)' : ''}`}>
+        {item.title}
+      </p>
+      <div className="flex items-center gap-2.5 mt-1.5 text-micro text-(--color-muted)">
+        <span>{item.id}</span>
+        <TypeBadge type={item.type} />
+        {meta.checklist && (meta.checklist.complete ? (
+          <span className="inline-flex items-center" aria-label="Чеклист выполнен">
+            <CheckCircle size={14} />
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1" aria-label="Чеклист">
+            <ListChecks size={14} />{meta.checklist.done}/{meta.checklist.total}
+          </span>
+        ))}
+        {meta.comments > 0 && (
+          <span className="inline-flex items-center gap-1" aria-label="Комментарии">
+            <ChatCircle size={14} />{meta.comments}
+          </span>
+        )}
+        {meta.hasBody && (
+          <span className="inline-flex items-center" aria-label="Есть описание">
+            <TextAlignLeft size={14} />
+          </span>
+        )}
+      </div>
+    </>
+  );
+}
+
 // Плывущий клон под курсором во время drag — не подписан на useSortable
 // (это делает DragOverlay сам), поэтому просто статичная разметка без
 // обработчиков.
 export function CardPreview({ item }: { item: Item }) {
-  const waiting = item.status === 'waiting';
   return (
-    <article className={panelClass(waiting ? 'accent' : 'default', 'p-3 pr-9 shadow-menu rotate-1')}>
-      <p className="text-body line-clamp-3">{item.title}</p>
-      <div className="flex items-center gap-2.5 mt-1.5 text-micro text-(--color-muted)">
-        <span>{item.id}</span>
-        <TypeBadge type={item.type} />
-      </div>
+    <article className={panelClass(cardTone(item), 'p-3 pr-9 shadow-menu rotate-1')}>
+      <CardBody item={item} />
     </article>
   );
 }
@@ -43,8 +76,6 @@ export function Card(
     item: Item; onChanged: () => void; onOpen: (item: Item) => void;
   },
 ) {
-  const done = item.checklist.filter(s => s.done).length;
-  const waiting = item.status === 'waiting';
   const [menuOpen, setMenuOpen] = useState(false);
   const { handlers, consumeClick } = useLongPress(() => setMenuOpen(true));
   // transition: null — всю анимацию позиции ведёт motion через layoutId.
@@ -97,8 +128,7 @@ export function Card(
       {...handlers}
       onClick={() => { if (!consumeClick()) onOpen(item); }}
       onContextMenu={e => { e.preventDefault(); setMenuOpen(true); }}
-      className={panelClass(waiting ? 'accent' : 'default',
-        'group relative p-3 pr-9 cursor-grab no-callout')}
+      className={panelClass(cardTone(item), 'group relative p-3 pr-9 cursor-grab no-callout')}
     >
       <StatusMenu
         item={item}
@@ -108,12 +138,7 @@ export function Card(
         onOpen={() => onOpen(item)}
         onArchive={archive}
       />
-      <p className="text-body line-clamp-3">{item.title}</p>
-      <div className="flex items-center gap-2.5 mt-1.5 text-micro text-(--color-muted)">
-        <span>{item.id}</span>
-        <TypeBadge type={item.type} />
-        {item.checklist.length > 0 && <span>{done}/{item.checklist.length}</span>}
-      </div>
+      <CardBody item={item} />
     </motion.article>
   );
 }
