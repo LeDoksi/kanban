@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { X } from '@phosphor-icons/react';
 import { sb } from './supabase';
 import type { Item, Epic } from './supabase';
 import { guessType, stripPrefix } from './guess';
 import { selectableEpics } from './epics';
-import { Sheet } from './ui/Sheet';
+import { Sheet, SheetCloseButton } from './ui/Sheet';
 import { Button } from './ui/Button';
 
 export function CreateModal(
@@ -91,7 +90,7 @@ export function CreateModal(
   const options = selectableEpics(epics, items);
 
   return (
-    <Sheet onClose={onClose} maxWidth="max-w-md">
+    <Sheet title="Новая задача" onClose={onClose} center>
       <div className="flex items-center justify-between mb-3">
         <div className="flex gap-1.5">
           {(['task', 'epic'] as const).map(k => (
@@ -109,9 +108,7 @@ export function CreateModal(
             </button>
           ))}
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
-          <X size={20} />
-        </Button>
+        <SheetCloseButton />
       </div>
 
       {kind === 'task' ? (
