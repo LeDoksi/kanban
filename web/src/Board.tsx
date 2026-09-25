@@ -24,14 +24,8 @@ import { Button } from './ui/Button';
 import { AnimatePresence, motion } from 'motion/react';
 import { panelClass } from './ui/panel';
 import { toasts } from './ui/toast';
-
-const COLUMNS = [
-  { key: 'hold',    label: 'Hold' },
-  { key: 'backlog', label: 'Backlog' },
-  { key: 'doing',   label: 'В работе' },
-  { key: 'waiting', label: 'Нужно от тебя' },
-  { key: 'done',    label: 'Готово' },
-] as const;
+import { COLUMNS } from './columns';
+import { storage, readLastProject, writeLastProject, pickProject } from './prefs';
 
 export function Board() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -79,8 +73,10 @@ export function Board() {
     if (error) { toasts.show(error.message); return; }
     const ps = (data ?? []) as Project[];
     setProjects(ps);
-    if (!keepCurrent && ps.length) setCurrent(ps[0].id);
-    if (keepCurrent && !current && ps.length) setCurrent(ps[0].id);
+    if (!keepCurrent || !current) {
+      const id = pickProject(ps, readLastProject(storage()));
+      if (id) setCurrent(id);
+    }
 
     if (iErr) { toasts.show(iErr.message); return; }
     const all = allItems ?? [];
@@ -96,6 +92,8 @@ export function Board() {
   };
 
   useEffect(() => { reloadProjects(false); }, []);
+
+  useEffect(() => { if (current) writeLastProject(storage(), current); }, [current]);
 
   const currentProject = projects.find(p => p.id === current) ?? null;
 
