@@ -50,3 +50,13 @@ body {
   color: var(--color-ink);
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
+
+/* iOS Safari приближает страницу при фокусе на поле со шрифтом меньше
+   16px и сам обратно не отдаляет (KAN-114). На сенсорных экранах поля
+   получают 16px. !important — потому что text-sm/text-2xs висят классами
+   прямо на элементах и перебили бы селектор по тегу. */
+@media (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { swipeTarget, swipePreview, SWIPE_THRESHOLD } from '../src/swipe.ts';
+import { swipeTarget, swipePreview, lockAxis, SWIPE_THRESHOLD, AXIS_SLOP } from '../src/swipe.ts';
 
 test('ниже порога — нет цели', () => {
   assert.equal(swipeTarget('backlog', SWIPE_THRESHOLD), null);
@@ -31,4 +31,19 @@ test('swipePreview: показывает направление с первог�
 test('swipePreview: за краями всё равно null', () => {
   assert.equal(swipePreview('hold', -1), null);
   assert.equal(swipePreview('done', 1), null);
+});
+
+test('lockAxis: до AXIS_SLOP решения нет', () => {
+  assert.equal(lockAxis(AXIS_SLOP - 1, 0), null);
+  assert.equal(lockAxis(0, -(AXIS_SLOP - 1)), null);
+});
+
+test('lockAxis: вертикаль — скролл, горизонталь — свайп', () => {
+  assert.equal(lockAxis(2, AXIS_SLOP), 'y');
+  assert.equal(lockAxis(-AXIS_SLOP * 2, 3), 'x');
+});
+
+test('lockAxis: диагональ считается скроллом', () => {
+  assert.equal(lockAxis(AXIS_SLOP, AXIS_SLOP), 'y');
+  assert.equal(lockAxis(-15, 12), 'y');
 });

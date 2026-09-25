@@ -16,7 +16,7 @@ import { Editable } from './Editable';
 import { between } from './position';
 import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
 import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
-import { swipeTarget, swipePreview, SWIPE_THRESHOLD } from './swipe';
+import { swipeTarget, swipePreview, lockAxis, SWIPE_THRESHOLD } from './swipe';
 import type { Epic } from './supabase';
 import { Button } from './ui/Button';
 import { AnimatePresence, motion } from 'motion/react';
@@ -525,21 +525,31 @@ function Card(
   const { listeners, setNodeRef, transform, isDragging } =
     useSortable({ id: item.id, transition: null });
 
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [axis, setAxis] = useState<'x' | 'y' | null>(null);
   const [dragX, setDragX] = useState(0);
-  const swiping = touchStartX !== null;
+  const swiping = touchStart !== null;
 
   const onTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.touches[0].clientX);
+    setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    setAxis(null);
   };
   const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    setDragX(e.touches[0].clientX - touchStartX);
+    if (touchStart === null || axis === 'y') return;
+    const dx = e.touches[0].clientX - touchStart.x;
+    const dy = e.touches[0].clientY - touchStart.y;
+    const locked = axis ?? lockAxis(dx, dy);
+    if (locked !== axis) setAxis(locked);
+    if (locked === 'x') setDragX(dx);
+  };
+  const resetTouch = () => {
+    setTouchStart(null);
+    setAxis(null);
+    setDragX(0);
   };
   const onTouchEnd = () => {
-    if (target) move(target);
-    setTouchStartX(null);
-    setDragX(0);
+    if (axis === 'x' && target) move(target);
+    resetTouch();
   };
 
   // target — с порогом, решает, что случится на onTouchEnd. preview —
@@ -601,6 +611,7 @@ function Card(
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
+          onTouchCancel={resetTouch}
           animate={{ x: dragX }}
           transition={swiping ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 32 }}
           className="touch-pan-y"

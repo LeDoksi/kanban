@@ -21,3 +21,17 @@ export function swipePreview(status: Item['status'], dragX: number): Item['statu
   if (dragX === 0) return null;
   return neighbor(status, dragX);
 }
+
+// Сколько пикселей пальцу дать, прежде чем решить, скролл это или свайп.
+// Раньше решения не было вовсе: любое косое движение при прокрутке
+// ленты сдвигало карточку вбок и открывало панель статуса.
+export const AXIS_SLOP = 10;
+
+// 'y' — это прокрутка, карточку не трогаем до конца касания; 'x' — свайп;
+// null — палец ещё не ушёл дальше AXIS_SLOP, рано решать.
+export function lockAxis(dx: number, dy: number): 'x' | 'y' | null {
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < AXIS_SLOP) return null;
+  // Горизонталь должна явно преобладать: диагональ считается скроллом,
+  // иначе палец, чуть ведущий вбок при прокрутке, опять цепляет карточку.
+  return Math.abs(dx) > Math.abs(dy) * 1.5 ? 'x' : 'y';
+}
