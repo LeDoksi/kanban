@@ -10,11 +10,10 @@ import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 import { EpicModal } from './EpicModal';
 import { ProjectDrawer, type ProjectRow } from './ProjectDrawer';
-import { Editable } from './Editable';
+import { BoardHeader } from './BoardHeader';
 import { between } from './position';
 import { shownDoneIds } from './done';
 import type { Epic } from './supabase';
-import { Button } from './ui/Button';
 import { AnimatePresence } from 'motion/react';
 import { toasts } from './ui/toast';
 import { COLUMNS, STATUS_ORDER, type Status } from './columns';
@@ -113,23 +112,8 @@ export function Board() {
 
   const currentProject = projects.find(p => p.id === current) ?? null;
 
-  const [editingDescription, setEditingDescription] = useState(false);
-  const [descriptionDraft, setDescriptionDraft] = useState('');
-
-  // Сбрасывать черновик при смене проекта или при обновлении описания
-  // с сервера — иначе после переключения проекта в textarea мог бы
-  // остаться текст от предыдущего.
-  useEffect(() => {
-    setEditingDescription(false);
-    setDescriptionDraft(currentProject?.description ?? '');
-  }, [current, currentProject?.description]);
-
-  const saveDescription = async () => {
-    setEditingDescription(false);
-    const clean = descriptionDraft.trim() || null;
-    if (!currentProject || clean === currentProject.description) return;
-    const { error } = await sb.from('projects')
-      .update({ description: clean }).eq('id', current);
+  const saveDescription = async (description: string | null) => {
+    const { error } = await sb.from('projects').update({ description }).eq('id', current);
     if (error) { toasts.show(error.message); return; }
     reloadProjects();
   };
@@ -279,39 +263,14 @@ export function Board() {
 
   return (
     <div className="h-dvh flex flex-col max-w-[1440px] mx-auto">
-      <header className="flex items-center gap-3 flex-wrap px-4 pt-3 pb-2 lg:px-6 lg:pt-5 lg:pb-4">
-        <Button variant="secondary" onClick={() => setShowProjects(true)}>
-          {currentProject?.name ?? 'Проекты'}
-        </Button>
-        {currentProject && (
-          editingDescription ? (
-            <textarea
-              autoFocus
-              value={descriptionDraft}
-              onChange={e => setDescriptionDraft(e.target.value)}
-              onBlur={saveDescription}
-              onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveDescription(); }}
-              rows={2}
-              placeholder="описание"
-              className="text-body bg-transparent border border-(--color-line)
-                         rounded-lg p-1 outline-none resize-none"
-            />
-          ) : (
-            <Editable
-              onEdit={() => setEditingDescription(true)}
-              className="text-body text-(--color-muted) cursor-text"
-            >
-              {currentProject.description || 'описание — клик, чтобы добавить'}
-            </Editable>
-          )
-        )}
-        <span className="text-body text-(--color-muted)">
-          {items.filter(i => i.status === 'done').length}/{items.length}
-        </span>
-        <Button variant="primary" className="ml-auto" onClick={() => setShowCreate(true)}>
-          Новая задача
-        </Button>
-      </header>
+      <BoardHeader
+        project={currentProject}
+        done={items.filter(i => i.status === 'done').length}
+        total={items.length}
+        onOpenProjects={() => setShowProjects(true)}
+        onCreate={() => setShowCreate(true)}
+        onSaveDescription={saveDescription}
+      />
 
       {/* Телефон — вкладки и лента с одной колонкой на экран, десктоп — сетка из пяти. */}
       <DndContext
