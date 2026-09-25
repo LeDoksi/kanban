@@ -60,7 +60,7 @@ export function Board() {
     const { data, error } = await sb.from('items').select('*')
       .eq('project_id', project)
       .order('position');
-    if (error) { toasts.show(error.message); return; }
+    if (error) { toasts.show(error.message); setLoaded(true); return; }
     const list = (data ?? []) as Item[];
     setItems(list);
     setLoaded(true);
