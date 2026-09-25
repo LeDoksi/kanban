@@ -1,6 +1,6 @@
 import { Children, useEffect, useRef, type ReactNode } from 'react';
 import { useReducedMotion } from 'motion/react';
-import { indexFromScroll } from './lane';
+import { settleIndex } from './lane';
 
 // Лента колонок на телефоне: листание и доводку делает браузер
 // (scroll-snap), своих обработчиков жеста нет — поэтому она не спорит с
@@ -27,7 +27,10 @@ export function Lane(
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const settle = () => onActiveChange(indexFromScroll(el.scrollLeft, step(), el.children.length));
+    const settle = () => {
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+      onActiveChange(settleIndex(el.scrollLeft, step(), el.children.length, atEnd, activeRef.current));
+    };
     if ('onscrollend' in window) {
       el.addEventListener('scrollend', settle);
       return () => el.removeEventListener('scrollend', settle);
