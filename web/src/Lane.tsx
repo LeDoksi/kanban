@@ -32,10 +32,14 @@ export function Lane(
       el.addEventListener('scrollend', settle);
       return () => el.removeEventListener('scrollend', settle);
     }
-    let raf = 0;
-    const onScroll = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(settle); };
+    // Без scrollend любой промежуточный кадр программного scrollTo (доводка
+    // после тапа по вкладке, ResizeObserver) тоже даёт scroll-событие —
+    // settle() на нём видел бы позицию «в пути» и откатывал бы активную
+    // вкладку назад. Ждём паузу в событиях scroll, а не первый rAF после них.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => { clearTimeout(timer); timer = setTimeout(settle, 120); };
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => { cancelAnimationFrame(raf); el.removeEventListener('scroll', onScroll); };
+    return () => { clearTimeout(timer); el.removeEventListener('scroll', onScroll); };
   }, [onActiveChange]);
 
   // Активная вкладка → прокрутка. Первый раз без анимации: открываемся
@@ -68,7 +72,7 @@ export function Lane(
                  snap-x snap-mandatory scroll-px-3 px-3 no-scrollbar"
     >
       {Children.map(children, child => (
-        <div className="snap-start shrink-0 h-full w-[calc(100%-24px)] md:w-[calc(50%-6px)]">
+        <div className="snap-start shrink-0 h-full w-[calc(100%-24px)] md:w-[calc(50%-12px)]">
           {child}
         </div>
       ))}
