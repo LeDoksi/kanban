@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Drawer } from 'vaul';
 import { motion } from 'motion/react';
 import { X } from '@phosphor-icons/react';
@@ -27,10 +27,32 @@ export function Sheet(
   const desktop = useMedia('(min-width: 1024px)');
   const [open, setOpen] = useState(true);
 
+  // vaul вызывает onAnimationEnd только когда сам меняет свой внутренний
+  // isOpen (drag, Esc, тап по подложке — через closeDrawer -> setIsOpen).
+  // Если вместо этого просто выставить снаружи проп open=false (как делала
+  // кнопка «×»), useControllableState это как внешний контроль воспринимает
+  // молча и onOpenChange/onAnimationEnd не зовёт — шторка визуально
+  // исчезает, а onClose родителя никогда не срабатывает, и та же шторка
+  // больше не открывается. closedRef гарантирует, что onClose вызовется
+  // ровно один раз — либо по этому таймеру (после анимации 0.5с), либо
+  // раньше по честному onAnimationEnd, — какой сработает первым. Хуки
+  // должны идти до условного return ниже (CenterSheet не использует vaul,
+  // но правила хуков одинаковы для всех веток рендера).
+  const closedRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    closedRef.current = false;
+    return () => { closedRef.current = true; clearTimeout(timerRef.current); };
+  }, []);
+  const finish = () => { if (!closedRef.current) { closedRef.current = true; onClose(); } };
+  const close = () => {
+    setOpen(false);
+    timerRef.current = setTimeout(finish, 500);
+  };
+
   if (center && desktop) return <CenterSheet title={title} onClose={onClose}>{children}</CenterSheet>;
 
   const direction = !desktop ? 'bottom' : side === 'left' ? 'left' : 'right';
-  const close = () => setOpen(false);
 
   return (
     <Drawer.Root
@@ -39,7 +61,7 @@ export function Sheet(
       direction={direction}
       // Родитель размонтирует шторку только когда она доехала: иначе
       // закрытие обрывалось бы на середине анимации.
-      onAnimationEnd={isOpen => { if (!isOpen) onClose(); }}
+      onAnimationEnd={isOpen => { if (!isOpen) finish(); }}
       // Поле ввода внутри шторки поднимается над клавиатурой (KAN-112).
       repositionInputs
     >
