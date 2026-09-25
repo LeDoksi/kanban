@@ -297,11 +297,20 @@ export function TaskModal(
             onKeyDown={e => { if (e.key === 'Enter') sendComment(); }}
             placeholder="комментарий"
             disabled={sending}
-            className="flex-1 h-8 px-2 rounded-lg bg-(--color-raised) text-body
+            // min-w-0 — иначе flex-1 не даёт полю сжаться меньше его
+            // content-width, и кнопка «Отправить» вылезает за модалку
+            // на узких экранах (390px).
+            className="flex-1 min-w-0 h-8 px-2 rounded-lg bg-(--color-raised) text-body
                        border border-(--color-line) outline-none
                        focus:border-(--color-accent)"
           />
-          <Button variant="primary" onClick={sendComment} disabled={!newComment.trim() || sending}>
+          <Button
+            variant="primary"
+            size="sm"
+            className="shrink-0"
+            onClick={sendComment}
+            disabled={!newComment.trim() || sending}
+          >
             Отправить
           </Button>
         </div>
