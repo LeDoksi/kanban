@@ -9,6 +9,7 @@ import { Button } from './Button';
 // (oxlint react/only-export-components) — импортировать его из
 // './ui/sheetClose' напрямую.
 import { CloseProvider, useSheetClose } from './sheetClose';
+import { useVisualViewportInsets } from './useVisualViewport';
 
 export function SheetCloseButton() {
   const close = useSheetClose();
@@ -50,9 +51,23 @@ export function Sheet(
     timerRef.current = setTimeout(finish, 500);
   };
 
+  // KAN-126: repositionInputs сдвигал (translate) весь fixed-элемент
+  // шторки вверх на высоту клавиатуры целиком — а не только поле ввода.
+  // При h-[92dvh] шторка уезжала выше верхнего края экрана, и на месте
+  // видимого оставался только серый оверлей. Вместо сдвига всей шторки
+  // сами подтягиваем нижнюю границу под клавиатуру и уменьшаем высоту —
+  // так composer с полем комментария остаётся на месте, а не улетает.
+  // Хук вызывается безусловно (до return для CenterSheet) — как и все
+  // хуки выше по тем же причинам, см. комментарий про closedRef.
+  const vv = useVisualViewportInsets();
+
   if (center && desktop) return <CenterSheet title={title} onClose={onClose}>{children}</CenterSheet>;
 
   const direction = !desktop ? 'bottom' : side === 'left' ? 'left' : 'right';
+
+  const bottomStyle = direction === 'bottom' && vv
+    ? { bottom: vv.bottomInset, height: Math.min(vv.height * 0.92, vv.height - 12) }
+    : undefined;
 
   return (
     <Drawer.Root
@@ -62,12 +77,15 @@ export function Sheet(
       // Родитель размонтирует шторку только когда она доехала: иначе
       // закрытие обрывалось бы на середине анимации.
       onAnimationEnd={isOpen => { if (!isOpen) finish(); }}
-      // Поле ввода внутри шторки поднимается над клавиатурой (KAN-112).
-      repositionInputs
+      // repositionInputs выключен (KAN-126): см. комментарий выше про
+      // bottomStyle — сами держим низ шторки над клавиатурой через
+      // visualViewport, а не даём vaul сдвигать всю шторку целиком.
+      repositionInputs={false}
     >
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-(--color-overlay)" />
         <Drawer.Content
+          style={bottomStyle}
           className={`fixed z-50 flex flex-col bg-(--color-surface) outline-none ${
             direction === 'bottom'
               ? 'inset-x-0 bottom-0 h-[92dvh] rounded-t-3xl'
