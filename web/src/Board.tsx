@@ -46,6 +46,11 @@ export function Board() {
 
   const isDesktop = useMedia('(min-width: 1024px)');
   const [activeColumn, setActiveColumn] = useState<Status>('backlog');
+  // Последний current, актуальный сразу (не после ре-рендера) — чтобы
+  // reload/reloadEpics могли отбросить ответ, который пришёл уже после
+  // переключения на другой проект.
+  const currentRef = useRef(current);
+  useEffect(() => { currentRef.current = current; }, [current]);
   // Стартовая колонка выбирается один раз на проект — по первой загрузке
   // его задач, а не при каждом realtime-обновлении.
   const columnPicked = useRef<string | null>(null);
@@ -60,6 +65,10 @@ export function Board() {
     const { data, error } = await sb.from('items').select('*')
       .eq('project_id', project)
       .order('position');
+    // Пока ждали ответ, могли переключиться на другой проект — тогда
+    // этот ответ устарел, показывать его (даже ошибку) нельзя: иначе
+    // неудачная загрузка проекта B на миг покажет карточки A.
+    if (project !== currentRef.current) return;
     if (error) { toasts.show(error.message); setLoaded(true); return; }
     const list = (data ?? []) as Item[];
     setItems(list);
@@ -75,6 +84,7 @@ export function Board() {
     if (!project) return;
     const { data, error } = await sb.from('epics').select('*')
       .eq('project_id', project).order('position');
+    if (project !== currentRef.current) return;
     if (error) { toasts.show(error.message); return; }
     setEpics((data ?? []) as Epic[]);
   };
@@ -122,6 +132,11 @@ export function Board() {
 
   useEffect(() => {
     setLoaded(false);
+    // Очищаем карточки/эпики сразу при смене проекта — иначе неудачная
+    // (или медленная) загрузка проекта B ещё какое-то время показывает
+    // карточки A под новым заголовком.
+    setItems([]);
+    setEpics([]);
     reload(current);
     reloadEpics(current);
     if (!current) return;
