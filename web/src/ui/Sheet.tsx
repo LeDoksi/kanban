@@ -65,8 +65,12 @@ export function Sheet(
 
   const direction = !desktop ? 'bottom' : side === 'left' ? 'left' : 'right';
 
+  // Низ шторки — на нижнем крае видимой области (над клавиатурой), верх
+  // считаем от него. top, а не bottom: bottom считался бы от layout
+  // viewport, который iOS при клавиатуре ведёт иначе, чем Chromium.
+  const sheetHeight = vv ? Math.min(vv.height * 0.92, vv.height - 12) : 0;
   const bottomStyle = direction === 'bottom' && vv
-    ? { bottom: vv.bottomInset, height: Math.min(vv.height * 0.92, vv.height - 12) }
+    ? { top: vv.offsetTop + vv.height - sheetHeight, bottom: 'auto', height: sheetHeight }
     : undefined;
 
   return (
@@ -81,6 +85,10 @@ export function Sheet(
       // bottomStyle — сами держим низ шторки над клавиатурой через
       // visualViewport, а не даём vaul сдвигать всю шторку целиком.
       repositionInputs={false}
+      // Свою подгонку под клавиатуру vaul (через react-aria preventScroll)
+      // на iOS делает прокруткой страницы при фокусе поля — это сдвигает
+      // fixed-шторку повторно. Прокрутку фона и так блокирует подложка.
+      disablePreventScroll
     >
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-(--color-overlay)" />
