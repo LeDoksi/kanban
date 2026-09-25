@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from '@phosphor-icons/react';
 import { sb } from './supabase';
 import type { Item, Epic } from './supabase';
 import { guessType, stripPrefix } from './guess';
@@ -108,13 +109,9 @@ export function CreateModal(
             </button>
           ))}
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Закрыть"
-          className="text-(--color-muted) hover:text-(--color-ink) text-lg leading-none"
-        >
-          ×
-        </button>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
+          <X size={20} />
+        </Button>
       </div>
 
       {kind === 'task' ? (

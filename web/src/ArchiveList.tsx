@@ -1,5 +1,7 @@
+import { X } from '@phosphor-icons/react';
 import type { Item } from './supabase';
 import { Sheet } from './ui/Sheet';
+import { Button } from './ui/Button';
 
 function Row(
   { item, onOpen, onRestore }: {
@@ -48,13 +50,9 @@ export function ArchiveList(
     <Sheet onClose={onClose} maxWidth="max-w-lg">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-title font-medium">Архив</h2>
-        <button
-          onClick={onClose}
-          aria-label="Закрыть"
-          className="text-(--color-muted) hover:text-(--color-ink) text-lg leading-none"
-        >
-          ×
-        </button>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
+          <X size={20} />
+        </Button>
       </div>
 
       {items.length === 0 && (

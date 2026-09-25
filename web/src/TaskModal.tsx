@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { X } from '@phosphor-icons/react';
 import { sb, setStatus } from './supabase';
 import type { Item, Comment, Epic } from './supabase';
 import { selectableEpics } from './epics';
@@ -164,13 +165,9 @@ export function TaskModal(
             </Editable>
           )}
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Закрыть"
-          className="text-(--color-muted) hover:text-(--color-ink) text-lg leading-none"
-        >
-          ×
-        </button>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
+          <X size={20} />
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-2">

@@ -18,6 +18,8 @@ import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
 import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
 import { swipeTarget, swipePreview, lockAxis, SWIPE_THRESHOLD } from './swipe';
 import type { Epic } from './supabase';
+import { ArrowLeft, ArrowRight } from '@phosphor-icons/react';
+import { TypeBadge } from './ui/TypeBadge';
 import { Button } from './ui/Button';
 import { AnimatePresence, motion } from 'motion/react';
 import { panelClass } from './ui/panel';
@@ -498,12 +500,7 @@ function CardPreview({ item }: { item: Item }) {
         }`}>
           {item.seq}
         </span>
-        {item.type !== 'task' && (
-          <span className="text-micro px-1.5 py-px rounded
-                           text-(--color-danger)">
-            {item.type === 'bug' ? 'баг' : 'долг'}
-          </span>
-        )}
+        <TypeBadge type={item.type} />
       </div>
       <p className={waiting ? 'text-(--color-accent-ink)' : ''}>{item.title}</p>
     </article>
@@ -583,7 +580,7 @@ function Card(
               : 'bg-(--color-raised) text-(--color-muted)'
           }`}
         >
-          <span>{dragX > 0 ? '→' : '←'}</span>
+          {dragX > 0 ? <ArrowRight size={16} /> : <ArrowLeft size={16} />}
           <span>{COLUMNS.find(c => c.key === preview)?.label}</span>
         </div>
       )}
@@ -622,12 +619,7 @@ function Card(
             }`}>
               {item.seq}
             </span>
-            {item.type !== 'task' && (
-              <span className="text-micro px-1.5 py-px rounded
-                               text-(--color-danger)">
-                {item.type === 'bug' ? 'баг' : 'долг'}
-              </span>
-            )}
+            <TypeBadge type={item.type} />
           </div>
 
           <p className={waiting ? 'text-(--color-accent-ink)' : ''}>{item.title}</p>

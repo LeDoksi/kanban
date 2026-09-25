@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { X } from '@phosphor-icons/react';
 import { sb } from './supabase';
 import type { Item, Epic } from './supabase';
 import { epicProgress } from './epics';
 import { Editable } from './Editable';
 import { Sheet } from './ui/Sheet';
+import { Button } from './ui/Button';
 
 export function EpicModal(
   { epicId, onClose, onOpenItem }: {
@@ -91,13 +93,9 @@ export function EpicModal(
             </Editable>
           )}
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Закрыть"
-          className="text-(--color-muted) hover:text-(--color-ink) text-lg leading-none"
-        >
-          ×
-        </button>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
+          <X size={20} />
+        </Button>
       </div>
 
       {err && <p className="text-body text-(--color-danger) mb-3">{err}</p>}
