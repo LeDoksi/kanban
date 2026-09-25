@@ -27,7 +27,15 @@ export function Toaster() {
             <span className="py-2">{toast.text}</span>
             {toast.action && (
               <button
-                onClick={() => { toast.action!.run(); toasts.dismiss(); }}
+                onClick={() => {
+                  // Сначала гасим текущий тост, потом запускаем действие:
+                  // если action.run() сам синхронно показывает новый тост
+                  // (например, «Отменено»), dismiss() после него стёр бы
+                  // именно этот новый тост, а не старый.
+                  const run = toast.action!.run;
+                  toasts.dismiss();
+                  run();
+                }}
                 className="h-8 px-3 rounded-full font-semibold text-(--color-ground)
                            hover:bg-(--color-ink-2)"
               >

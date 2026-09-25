@@ -38,7 +38,7 @@ export function StatusMenu(
           className="absolute right-1.5 top-1.5 size-8 grid place-items-center rounded-full
                      text-(--color-muted) hover:bg-(--color-raised) hover:text-(--color-ink)
                      opacity-0 group-hover:opacity-100 focus-visible:opacity-100
-                     data-[state=open]:opacity-100
+                     group-focus-within:opacity-100 data-[state=open]:opacity-100
                      [@media(hover:none)]:pointer-events-none"
         >
           <DotsThree size={18} weight="bold" />
