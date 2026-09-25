@@ -24,6 +24,8 @@
   --color-danger: #c0392b;
   --color-overlay: rgb(29 34 38 / 0.40);
   --color-shadow: rgb(40 50 60 / 0.08);
+  /* Мягкая подложка под группой эпика (KAN-125) — едва заметнее фона. */
+  --color-group: rgb(29 34 38 / 0.045);
 
   /* Карточки без рамок: объект от фона отделяет тень в тон фона. */
   --shadow-card: 0 1px 2px var(--color-shadow), 0 4px 14px -6px var(--color-shadow);
@@ -64,6 +66,7 @@
     --color-danger: #f07a6c;
     --color-overlay: rgb(0 0 0 / 0.60);
     --color-shadow: rgb(0 0 0 / 0.45);
+    --color-group: rgb(255 255 255 / 0.035);
   }
 }
 
