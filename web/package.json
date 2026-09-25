@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs",
+    "shots": "node scripts/shots.mjs",
     "test": "node --test test/guess.test.ts test/position.test.ts test/epics.test.ts test/slug.test.ts test/done.test.ts test/swipe.test.ts"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
+    "playwright-core": "^1.56.1",
     "sharp": "^0.35.4",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
