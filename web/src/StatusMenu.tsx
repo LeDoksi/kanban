@@ -53,7 +53,9 @@ export function StatusMenu(
           onMouseDown={stop}
           onPointerDown={stop}
           onTouchStart={stop}
-          className="z-50 min-w-56 rounded-2xl bg-(--color-surface) shadow-menu p-1.5"
+          // KAN-122: меню открывается под ещё нажатым пальцем — без
+          // no-callout это выделяет текст пунктов меню как текст страницы.
+          className="z-50 min-w-56 rounded-2xl bg-(--color-surface) shadow-menu p-1.5 no-callout"
         >
           {COLUMNS.map(c => {
             const Icon = STATUS_ICON[c.key];
