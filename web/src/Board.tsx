@@ -277,6 +277,7 @@ export function Board() {
       onOpen={setOpenItem}
       onOpenEpic={id => setViewEpic(id)}
       onShowArchive={() => setShowArchive(true)}
+      onLocalPatch={(id, patch) => setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))}
     />
   );
 
@@ -305,7 +306,7 @@ export function Board() {
         ) : (
           <>
             <ColumnTabs counts={counts} active={activeColumn} onSelect={selectColumn} />
-            <Lane active={STATUS_ORDER.indexOf(activeColumn)} onActiveChange={selectColumnIndex}>
+            <Lane active={STATUS_ORDER.indexOf(activeColumn)} onActiveChange={selectColumnIndex} ready={loaded}>
               {COLUMNS.map(col => renderColumn(col, true))}
             </Lane>
           </>
