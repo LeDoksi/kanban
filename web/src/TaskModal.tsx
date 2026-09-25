@@ -7,11 +7,13 @@ import { Button } from './ui/Button';
 import { Markdown } from './ui/Markdown';
 import { PropertySelect } from './ui/PropertySelect';
 import { AutoTextarea } from './ui/AutoTextarea';
-import { relTime } from './time';
+import { relTime, fullDate } from './time';
 import { toasts } from './ui/toast';
 import { COLUMNS } from './columns';
 import { STATUS_ICON } from './statusIcons';
-import { CheckSquare, Bug, Wrench, ArrowSquareOut } from '@phosphor-icons/react';
+import {
+  CheckSquare, Bug, Wrench, ArrowSquareOut, CheckCircle, Circle, PaperPlaneRight,
+} from '@phosphor-icons/react';
 
 export function TaskModal(
   { item, epics, allItems, onClose, onChanged, onOpenEpic }: {
@@ -74,28 +76,6 @@ export function TaskModal(
       .update({ epic_id: epicId || null }).eq('id', item.id);
     if (error) { toasts.show(error.message); return; }
     onChanged();
-  };
-
-  const archive = async () => {
-    const { error } = await sb.from('items')
-      .update({ archived_at: new Date().toISOString() }).eq('id', item.id);
-    if (error) { toasts.show(error.message); return; }
-    onChanged();
-  };
-
-  const restore = async () => {
-    const { error } = await sb.from('items')
-      .update({ status: 'doing', archived_at: null }).eq('id', item.id);
-    if (error) { toasts.show(error.message); return; }
-    onChanged();
-  };
-
-  const remove = async () => {
-    if (!confirm(`Удалить «${item.title}» навсегда?`)) return;
-    const { error } = await sb.from('items').delete().eq('id', item.id);
-    if (error) { toasts.show(error.message); return; }
-    onChanged();
-    onClose();
   };
 
   const sendComment = async () => {
@@ -223,75 +203,67 @@ export function TaskModal(
       </section>
 
       {item.checklist.length > 0 && (
-        <ul className="space-y-1.5 mb-4">
-          {item.checklist.map((s, i) => (
-            <li key={i} className="flex items-center gap-2 text-body">
-              <input
-                type="checkbox"
-                checked={s.done}
-                onChange={() => toggleCheck(i)}
-              />
-              <span className={s.done ? 'text-(--color-muted) line-through' : ''}>
-                {s.text}
-              </span>
+        <section className="mb-5">
+          <h3 className="text-meta text-(--color-muted) mb-1.5">
+            Чеклист · {item.checklist.filter(s => s.done).length} из {item.checklist.length}
+          </h3>
+          <ul className="space-y-0.5">
+            {item.checklist.map((s, i) => (
+              <li key={i}>
+                <button
+                  role="checkbox" aria-checked={s.done}
+                  onClick={() => toggleCheck(i)}
+                  className="w-full flex items-start gap-2.5 py-1.5 px-1 rounded-xl text-left text-body hover:bg-(--color-raised)"
+                >
+                  {s.done
+                    ? <CheckCircle size={20} weight="fill" className="shrink-0 text-(--color-accent)" />
+                    : <Circle size={20} className="shrink-0 text-(--color-muted)" />}
+                  <span className={s.done ? 'text-(--color-muted) line-through' : ''}>{s.text}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="pb-20">
+        <h3 className="text-meta text-(--color-muted) mb-2">Комментарии</h3>
+        {comments.length === 0 && <p className="text-meta text-(--color-muted)">Пока нет.</p>}
+        <ul className="space-y-3">
+          {comments.map(c => (
+            <li key={c.id}>
+              <div className="flex items-baseline gap-2 text-micro text-(--color-muted)">
+                <span className="font-semibold text-(--color-ink-2)">{c.author === 'claude' ? 'Claude' : 'Ты'}</span>
+                <time dateTime={c.created_at} title={fullDate(c.created_at)}>{relTime(c.created_at, new Date())}</time>
+              </div>
+              <Markdown text={c.body} className="text-body mt-0.5" />
             </li>
           ))}
         </ul>
-      )}
+      </section>
 
-      <div className="border-t border-(--color-line) pt-3">
-        {comments.length > 0 && (
-          <div className="space-y-2 mb-2">
-            {comments.map(c => (
-              <div key={c.id} className="text-meta">
-                <span className="text-(--color-muted)">
-                  {relTime(c.created_at, new Date())} {c.author}:
-                </span>{' '}
-                <Markdown text={c.body} className="inline" />
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <input
+      {/* Поле комментария прилипает к низу шторки: писать можно, не
+          проматывая длинное описание. */}
+      <div className="sticky bottom-0 -mx-5 px-5 pt-2 pb-1 bg-(--color-surface) border-t border-(--color-line)">
+        <form
+          onSubmit={e => { e.preventDefault(); sendComment(); }}
+          className="flex items-end gap-2"
+        >
+          <AutoTextarea
             value={newComment}
             onChange={e => setNewComment(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') sendComment(); }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendComment(); } }}
             placeholder="комментарий"
+            aria-label="Комментарий"
             disabled={sending}
-            // min-w-0 — иначе flex-1 не даёт полю сжаться меньше его
-            // content-width, и кнопка «Отправить» вылезает за модалку
-            // на узких экранах (390px).
-            className="flex-1 min-w-0 h-8 px-2 rounded-lg bg-(--color-raised) text-body
-                       border border-(--color-line) outline-none
-                       focus:border-(--color-accent)"
+            className="flex-1 min-w-0 max-h-40 py-2 px-3 rounded-xl bg-(--color-raised) text-body outline-none
+                       focus:ring-2 focus:ring-(--color-accent)"
           />
-          <Button
-            variant="primary"
-            size="sm"
-            className="shrink-0"
-            onClick={sendComment}
-            disabled={!newComment.trim() || sending}
-          >
-            Отправить
+          <Button type="submit" variant="primary" size="icon" aria-label="Отправить"
+                  disabled={!newComment.trim() || sending} className="shrink-0">
+            <PaperPlaneRight size={18} weight="fill" />
           </Button>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 mt-4 pt-3 border-t border-(--color-line)">
-        {item.status === 'done' && !item.archived_at && (
-          <button onClick={archive} className="text-meta text-(--color-muted) hover:text-(--color-ink)">
-            В архив
-          </button>
-        )}
-        {item.archived_at && (
-          <button onClick={restore} className="text-meta text-(--color-muted) hover:text-(--color-ink)">
-            Вернуть в работу
-          </button>
-        )}
-        <button onClick={remove} className="text-meta text-(--color-danger) ml-auto">
-          Удалить
-        </button>
+        </form>
       </div>
     </Sheet>
   );
