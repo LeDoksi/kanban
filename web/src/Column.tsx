@@ -11,12 +11,16 @@ import { Archive } from '@phosphor-icons/react';
 import { Button } from './ui/Button';
 
 export function Column(
-  { col, items, epics, allItems, archivedCount, onChanged, onOpen, onOpenEpic, onShowArchive, bare, loading }: {
+  {
+    col, items, epics, allItems, archivedCount, onChanged, onOpen, onOpenEpic, onShowArchive,
+    onLocalPatch, bare, loading,
+  }: {
     col: typeof COLUMNS[number]; items: Item[]; epics: Epic[]; allItems: Item[];
     archivedCount: number;
     onChanged: () => void;
     onOpen: (item: Item) => void; onOpenEpic: (epicId: string) => void;
     onShowArchive: () => void;
+    onLocalPatch: (id: string, patch: Partial<Item>) => void;
     bare: boolean;
     loading: boolean;
   },
@@ -68,7 +72,7 @@ export function Column(
                   <EpicGroupHeader epic={epic} allItems={allItems} onOpen={onOpenEpic} />
                   <div className="space-y-1.5">
                     {epicItems.map(i => (
-                      <Card key={i.id} item={i} onChanged={onChanged} onOpen={onOpen} />
+                      <Card key={i.id} item={i} onChanged={onChanged} onOpen={onOpen} onLocalPatch={onLocalPatch} />
                     ))}
                   </div>
                 </div>
@@ -84,7 +88,7 @@ export function Column(
                     <h3 className="px-1 pb-1 text-meta text-(--color-muted)">Без эпика</h3>
                   )}
                   {ungrouped.map(i => (
-                    <Card key={i.id} item={i} onChanged={onChanged} onOpen={onOpen} />
+                    <Card key={i.id} item={i} onChanged={onChanged} onOpen={onOpen} onLocalPatch={onLocalPatch} />
                   ))}
                 </div>
               )}

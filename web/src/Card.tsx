@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { motion } from 'motion/react';
 import { ListChecks, CheckCircle, ChatCircle, TextAlignLeft } from '@phosphor-icons/react';
-import { sb, setStatus } from './supabase';
+import { sb, setStatus, closedAtFor } from './supabase';
 import type { Item } from './supabase';
 import { columnLabel, undoPatch, type Status } from './columns';
 import { useLongPress } from './useLongPress';
@@ -72,8 +72,9 @@ export function CardPreview({ item }: { item: Item }) {
 }
 
 export function Card(
-  { item, onChanged, onOpen }: {
+  { item, onChanged, onOpen, onLocalPatch }: {
     item: Item; onChanged: () => void; onOpen: (item: Item) => void;
+    onLocalPatch: (id: string, patch: Partial<Item>) => void;
   },
 ) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -85,9 +86,12 @@ export function Card(
   const move = async (status: Status) => {
     if (status === item.status) return;
     const prev = undoPatch(item);
+    // Как при перетаскивании: карточка переезжает сразу, а не после
+    // круга до сервера и перезагрузки.
+    onLocalPatch(item.id, { status, closed_at: closedAtFor(status) });
     const { error } = await setStatus(item.id, status);
     // Молчаливый отказ выглядел бы как «карточка сама вернулась назад».
-    if (error) { toasts.show(error.message); return; }
+    if (error) { toasts.show(error.message); onChanged(); return; }
     onChanged();
     toasts.show(`Перенесено в «${columnLabel(status)}»`, {
       label: 'Отменить',
