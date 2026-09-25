@@ -37,8 +37,8 @@ function SignIn() {
   return (
     <div className="min-h-dvh grid place-items-center p-6">
       <div className="w-full max-w-72 space-y-3 text-center">
-        <h1 className="text-base font-medium">Канбан</h1>
-        {error && <p className="text-xs text-(--color-danger)">{error}</p>}
+        <h1 className="text-title font-medium">Канбан</h1>
+        {error && <p className="text-meta text-(--color-danger)">{error}</p>}
         <Button onClick={signIn} variant="primary" className="w-full">
           Войти через Google
         </Button>

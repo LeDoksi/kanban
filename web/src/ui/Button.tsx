@@ -9,8 +9,8 @@ const VARIANT: Record<Variant, string> = {
 };
 
 const SIZE: Record<Size, string> = {
-  sm: 'h-7 px-2 text-2xs',
-  md: 'h-8 px-3 text-sm',
+  sm: 'h-7 px-2 text-micro',
+  md: 'h-8 px-3 text-body',
 };
 
 export function Button(

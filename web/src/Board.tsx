@@ -271,20 +271,20 @@ export function Board() {
               onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveDescription(); }}
               rows={2}
               placeholder="описание"
-              className="text-sm bg-transparent border border-(--color-line)
+              className="text-body bg-transparent border border-(--color-line)
                          rounded-lg p-1 outline-none resize-none"
             />
           ) : (
             <Editable
               onEdit={() => setEditingDescription(true)}
-              className="text-sm text-(--color-muted) cursor-text"
+              className="text-body text-(--color-muted) cursor-text"
             >
               {currentProject.description || 'описание — клик, чтобы добавить'}
             </Editable>
           )
         )}
-        {err && <span className="text-sm text-(--color-danger)">{err}</span>}
-        <span className="text-sm text-(--color-muted)">
+        {err && <span className="text-body text-(--color-danger)">{err}</span>}
+        <span className="text-body text-(--color-muted)">
           {items.filter(i => i.status === 'done').length}/{items.length}
         </span>
         <Button variant="primary" className="ml-auto" onClick={() => setShowCreate(true)}>
@@ -423,11 +423,11 @@ function Column(
       ref={setNodeRef}
       className="rounded-lg border border-(--color-line) p-2"
     >
-      <h2 className="text-xs text-(--color-muted) mb-2 px-1 flex items-center gap-1.5
+      <h2 className="text-meta text-(--color-muted) mb-2 px-1 flex items-center gap-1.5
                      sticky top-0 bg-(--color-ground) py-1 z-10">
         {col.label}
         {full.length > 0 && (
-          <span className="text-2xs px-1.5 rounded-full bg-(--color-raised)">
+          <span className="text-micro px-1.5 rounded-full bg-(--color-raised)">
             {full.length}
           </span>
         )}
@@ -444,7 +444,7 @@ function Column(
             <div key={epic.id} className="rounded-lg border border-(--color-line) p-1.5">
               <button
                 onClick={() => onOpenEpic(epic.id)}
-                className="text-2xs text-(--color-muted) hover:text-(--color-ink) underline mb-1 px-1 block"
+                className="text-micro text-(--color-muted) hover:text-(--color-ink) underline mb-1 px-1 block"
               >
                 {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
               </button>
@@ -459,7 +459,7 @@ function Column(
             <button
               key={epic.id}
               onClick={() => onOpenEpic(epic.id)}
-              className="text-2xs text-(--color-muted) hover:text-(--color-ink) underline px-1 block"
+              className="text-micro text-(--color-muted) hover:text-(--color-ink) underline px-1 block"
             >
               {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
             </button>
@@ -476,7 +476,7 @@ function Column(
       {capped && (hiddenDone > 0 || archivedCount > 0) && (
         <button
           onClick={onShowArchive}
-          className="text-xs text-(--color-muted) hover:text-(--color-ink) mt-2 px-1"
+          className="text-meta text-(--color-muted) hover:text-(--color-ink) mt-2 px-1"
         >
           ещё {hiddenDone + archivedCount} · архив
         </button>
@@ -491,15 +491,15 @@ function Column(
 function CardPreview({ item }: { item: Item }) {
   const waiting = item.status === 'waiting';
   return (
-    <article className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-sm shadow-lg rotate-1')}>
+    <article className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-body shadow-lg rotate-1')}>
       <div className="flex items-center gap-1.5 mb-1">
-        <span className={`text-2xs font-mono ${
+        <span className={`text-micro font-mono ${
           waiting ? 'text-(--color-accent-ink)' : 'text-(--color-muted)'
         }`}>
           {item.seq}
         </span>
         {item.type !== 'task' && (
-          <span className="text-2xs px-1.5 py-px rounded
+          <span className="text-micro px-1.5 py-px rounded
                            text-(--color-danger)">
             {item.type === 'bug' ? 'баг' : 'долг'}
           </span>
@@ -575,7 +575,7 @@ function Card(
         <div
           aria-hidden
           className={`absolute inset-0 rounded-lg flex items-center gap-1.5 px-3
-                     text-sm font-medium overflow-hidden ${
+                     text-body font-medium overflow-hidden ${
             dragX > 0 ? 'justify-start' : 'justify-end'
           } ${
             committed
@@ -605,7 +605,7 @@ function Card(
         transition={{ duration: isDragging ? 0 : 0.2, ease: 'easeOut' }}
         {...listeners}
         onClick={() => onOpen(item)}
-        className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-sm cursor-grab')}
+        className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-body cursor-grab')}
       >
         <motion.div
           onTouchStart={onTouchStart}
@@ -617,13 +617,13 @@ function Card(
           className="touch-pan-y"
         >
           <div className="flex items-center gap-1.5 mb-1">
-            <span className={`text-2xs font-mono ${
+            <span className={`text-micro font-mono ${
               waiting ? 'text-(--color-accent-ink)' : 'text-(--color-muted)'
             }`}>
               {item.seq}
             </span>
             {item.type !== 'task' && (
-              <span className="text-2xs px-1.5 py-px rounded
+              <span className="text-micro px-1.5 py-px rounded
                                text-(--color-danger)">
                 {item.type === 'bug' ? 'баг' : 'долг'}
               </span>
@@ -633,7 +633,7 @@ function Card(
           <p className={waiting ? 'text-(--color-accent-ink)' : ''}>{item.title}</p>
 
           {item.checklist.length > 0 && (
-            <p className="text-2xs text-(--color-muted) mt-1.5">
+            <p className="text-micro text-(--color-muted) mt-1.5">
               {done}/{item.checklist.length}
             </p>
           )}

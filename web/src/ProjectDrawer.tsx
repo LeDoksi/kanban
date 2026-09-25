@@ -13,7 +13,7 @@ export function ProjectDrawer(
   return (
     <Sheet onClose={onClose} placement="left">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-medium">Проекты</h2>
+        <h2 className="text-title font-medium">Проекты</h2>
         <button
           onClick={onClose}
           aria-label="Закрыть"
@@ -30,7 +30,7 @@ export function ProjectDrawer(
           <button
             key={project.id}
             onClick={() => { onSelect(project.id); onClose(); }}
-            className={`w-full text-left text-sm px-3 py-2 rounded
+            className={`w-full text-left text-body px-3 py-2 rounded
                        hover:bg-(--color-raised) ${
               project.id === current ? 'bg-(--color-raised)' : ''
             }`}

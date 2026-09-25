@@ -141,7 +141,7 @@ export function TaskModal(
     <Sheet onClose={onClose} maxWidth="max-w-lg">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1">
-          <span className="text-2xs font-mono text-(--color-muted)">
+          <span className="text-micro font-mono text-(--color-muted)">
             {item.id}
           </span>
           {editingTitle ? (
@@ -151,14 +151,14 @@ export function TaskModal(
               onChange={e => setTitleDraft(e.target.value)}
               onBlur={saveTitle}
               onKeyDown={e => { if (e.key === 'Enter') saveTitle(); }}
-              className="block w-full text-base font-medium bg-transparent
+              className="block w-full text-title font-medium bg-transparent
                          border-b border-(--color-line) outline-none"
             />
           ) : (
             <Editable
               as="h2"
               onEdit={() => setEditingTitle(true)}
-              className="text-base font-medium cursor-text"
+              className="text-title font-medium cursor-text"
             >
               {item.title}
             </Editable>
@@ -178,7 +178,7 @@ export function TaskModal(
           <button
             key={s}
             onClick={() => move(s)}
-            className={`text-2xs px-2 py-1 rounded-full border ${
+            className={`text-micro px-2 py-1 rounded-full border ${
               item.status === s
                 ? 'border-(--color-accent) text-(--color-accent-ink)'
                 : 'border-(--color-line) text-(--color-muted)'
@@ -194,7 +194,7 @@ export function TaskModal(
           <button
             key={t}
             onClick={() => setType(t)}
-            className={`text-2xs px-2 py-1 rounded-full border ${
+            className={`text-micro px-2 py-1 rounded-full border ${
               item.type === t
                 ? 'border-(--color-accent) text-(--color-accent-ink)'
                 : 'border-(--color-line) text-(--color-muted)'
@@ -212,7 +212,7 @@ export function TaskModal(
         <select
           value={item.epic_id ?? ''}
           onChange={e => setEpic(e.target.value)}
-          className="min-w-0 flex-1 h-7 px-1.5 rounded text-2xs bg-transparent
+          className="min-w-0 flex-1 h-7 px-1.5 rounded text-micro bg-transparent
                      border border-(--color-line) text-(--color-muted) truncate"
         >
           <option value="">— без эпика —</option>
@@ -223,14 +223,14 @@ export function TaskModal(
         {item.epic_id && onOpenEpic && (
           <button
             onClick={() => onOpenEpic(item.epic_id!)}
-            className="shrink-0 whitespace-nowrap text-xs text-(--color-muted) hover:text-(--color-ink) underline"
+            className="shrink-0 whitespace-nowrap text-meta text-(--color-muted) hover:text-(--color-ink) underline"
           >
             открыть эпик
           </button>
         )}
       </div>
 
-      {err && <p className="text-sm text-(--color-danger) mb-3">{err}</p>}
+      {err && <p className="text-body text-(--color-danger) mb-3">{err}</p>}
 
       {editingBody ? (
         <textarea
@@ -241,7 +241,7 @@ export function TaskModal(
           onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveBody(); }}
           rows={3}
           placeholder="описание"
-          className="w-full p-2 mb-4 rounded-lg bg-(--color-raised) text-sm
+          className="w-full p-2 mb-4 rounded-lg bg-(--color-raised) text-body
                      border border-(--color-line) outline-none resize-none
                      focus:border-(--color-accent)"
         />
@@ -249,7 +249,7 @@ export function TaskModal(
         <Editable
           as="p"
           onEdit={() => setEditingBody(true)}
-          className="text-sm whitespace-pre-wrap mb-4 cursor-text min-h-[1.5em]"
+          className="text-body whitespace-pre-wrap mb-4 cursor-text min-h-[1.5em]"
         >
           {item.body || (
             <span className="text-(--color-muted)">описание — клик, чтобы добавить</span>
@@ -258,7 +258,7 @@ export function TaskModal(
       )}
 
       {item.blocks.length > 0 && (
-        <p className="text-xs text-(--color-muted) mb-3">
+        <p className="text-meta text-(--color-muted) mb-3">
           блокирует: {item.blocks.join(', ')}
         </p>
       )}
@@ -266,7 +266,7 @@ export function TaskModal(
       {item.checklist.length > 0 && (
         <ul className="space-y-1.5 mb-4">
           {item.checklist.map((s, i) => (
-            <li key={i} className="flex items-center gap-2 text-sm">
+            <li key={i} className="flex items-center gap-2 text-body">
               <input
                 type="checkbox"
                 checked={s.done}
@@ -284,7 +284,7 @@ export function TaskModal(
         {comments.length > 0 && (
           <div className="space-y-2 mb-2">
             {comments.map(c => (
-              <div key={c.id} className="text-xs">
+              <div key={c.id} className="text-meta">
                 <span className="text-(--color-muted)">
                   {c.created_at.slice(0, 10)} {c.author}:
                 </span>{' '}
@@ -300,7 +300,7 @@ export function TaskModal(
             onKeyDown={e => { if (e.key === 'Enter') sendComment(); }}
             placeholder="комментарий"
             disabled={sending}
-            className="flex-1 h-8 px-2 rounded-lg bg-(--color-raised) text-sm
+            className="flex-1 h-8 px-2 rounded-lg bg-(--color-raised) text-body
                        border border-(--color-line) outline-none
                        focus:border-(--color-accent)"
           />
@@ -312,16 +312,16 @@ export function TaskModal(
 
       <div className="flex items-center gap-3 mt-4 pt-3 border-t border-(--color-line)">
         {item.status === 'done' && !item.archived_at && (
-          <button onClick={archive} className="text-xs text-(--color-muted) hover:text-(--color-ink)">
+          <button onClick={archive} className="text-meta text-(--color-muted) hover:text-(--color-ink)">
             В архив
           </button>
         )}
         {item.archived_at && (
-          <button onClick={restore} className="text-xs text-(--color-muted) hover:text-(--color-ink)">
+          <button onClick={restore} className="text-meta text-(--color-muted) hover:text-(--color-ink)">
             Вернуть в работу
           </button>
         )}
-        <button onClick={remove} className="text-xs text-(--color-danger) ml-auto">
+        <button onClick={remove} className="text-meta text-(--color-danger) ml-auto">
           Удалить
         </button>
       </div>
