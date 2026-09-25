@@ -230,7 +230,7 @@ export function TaskModal(
         )}
       </div>
 
-      {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
+      {err && <p className="text-sm text-(--color-danger) mb-3">{err}</p>}
 
       {editingBody ? (
         <textarea
@@ -241,7 +241,7 @@ export function TaskModal(
           onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveBody(); }}
           rows={3}
           placeholder="описание"
-          className="w-full p-2 mb-4 rounded-lg bg-(--color-panel) text-sm
+          className="w-full p-2 mb-4 rounded-lg bg-(--color-raised) text-sm
                      border border-(--color-line) outline-none resize-none
                      focus:border-(--color-accent)"
         />
@@ -300,7 +300,7 @@ export function TaskModal(
             onKeyDown={e => { if (e.key === 'Enter') sendComment(); }}
             placeholder="комментарий"
             disabled={sending}
-            className="flex-1 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+            className="flex-1 h-8 px-2 rounded-lg bg-(--color-raised) text-sm
                        border border-(--color-line) outline-none
                        focus:border-(--color-accent)"
           />
@@ -321,7 +321,7 @@ export function TaskModal(
             Вернуть в работу
           </button>
         )}
-        <button onClick={remove} className="text-xs text-(--color-danger-ink) ml-auto">
+        <button onClick={remove} className="text-xs text-(--color-danger) ml-auto">
           Удалить
         </button>
       </div>

@@ -62,7 +62,7 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
         value={name}
         onChange={e => onName(e.target.value)}
         placeholder="имя: Семейное приложение"
-        className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+        className="w-full h-8 px-2 rounded-lg bg-(--color-raised) text-sm
                    border border-(--color-line) outline-none
                    focus:border-(--color-accent)"
       />
@@ -71,7 +71,7 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
           value={slug}
           onChange={e => { setSlug(e.target.value); setSlugTouched(true); setError(''); }}
           placeholder="слаг"
-          className="flex-1 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+          className="flex-1 h-8 px-2 rounded-lg bg-(--color-raised) text-sm
                      border border-(--color-line) outline-none
                      focus:border-(--color-accent)"
         />
@@ -79,7 +79,7 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
           value={prefix}
           onChange={e => { setPrefix(e.target.value); setPrefixTouched(true); setError(''); }}
           placeholder="префикс"
-          className="w-20 h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+          className="w-20 h-8 px-2 rounded-lg bg-(--color-raised) text-sm
                      border border-(--color-line) outline-none
                      focus:border-(--color-accent)"
         />
@@ -88,7 +88,7 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
         value={description}
         onChange={e => setDescription(e.target.value)}
         placeholder="описание (необязательно)"
-        className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+        className="w-full h-8 px-2 rounded-lg bg-(--color-raised) text-sm
                    border border-(--color-line) outline-none
                    focus:border-(--color-accent)"
       />
@@ -96,7 +96,7 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
         value={repoPath}
         onChange={e => setRepoPath(e.target.value)}
         placeholder="путь к папке на компе (необязательно)"
-        className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+        className="w-full h-8 px-2 rounded-lg bg-(--color-raised) text-sm
                    border border-(--color-line) outline-none
                    focus:border-(--color-accent)"
       />
@@ -105,7 +105,7 @@ export function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
         придётся называть проект явно.
       </p>
 
-      {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
+      {error && <p className="text-xs text-(--color-danger)">{error}</p>}
 
       <div className="flex gap-2">
         <Button type="submit" variant="primary" disabled={busy} className="flex-1">

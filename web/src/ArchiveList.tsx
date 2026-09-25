@@ -9,7 +9,7 @@ function Row(
   return (
     <div
       className="flex items-center gap-2 px-2 py-1.5 rounded
-                 hover:bg-(--color-panel)"
+                 hover:bg-(--color-raised)"
     >
       <button
         onClick={() => onOpen(item)}

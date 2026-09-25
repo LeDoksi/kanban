@@ -125,7 +125,7 @@ export function CreateModal(
             onChange={e => onTitle(e.target.value)}
             placeholder="баг: календарь не листает в ноябрь"
             rows={2}
-            className="w-full p-2 rounded-lg bg-(--color-panel) text-sm
+            className="w-full p-2 rounded-lg bg-(--color-raised) text-sm
                        border border-(--color-line) outline-none resize-none
                        focus:border-(--color-accent)"
           />
@@ -148,7 +148,7 @@ export function CreateModal(
           <select
             value={epicId}
             onChange={e => setEpicId(e.target.value)}
-            className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+            className="w-full h-8 px-2 rounded-lg bg-(--color-raised) text-sm
                        border border-(--color-line)"
           >
             <option value="">— без эпика —</option>
@@ -156,7 +156,7 @@ export function CreateModal(
               <option key={ep.id} value={ep.id}>{ep.title}</option>
             ))}
           </select>
-          {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
+          {error && <p className="text-xs text-(--color-danger)">{error}</p>}
           <Button type="submit" variant="primary" disabled={busy} className="w-full">
             {busy ? '…' : 'В Backlog'}
           </Button>
@@ -168,7 +168,7 @@ export function CreateModal(
             value={epicTitle}
             onChange={e => { setEpicTitle(e.target.value); setError(''); }}
             placeholder="крупная тема"
-            className="w-full h-8 px-2 rounded-lg bg-(--color-panel) text-sm
+            className="w-full h-8 px-2 rounded-lg bg-(--color-raised) text-sm
                        border border-(--color-line) outline-none
                        focus:border-(--color-accent)"
           />
@@ -177,11 +177,11 @@ export function CreateModal(
             onChange={e => setGoal(e.target.value)}
             placeholder="цель (необязательно)"
             rows={2}
-            className="w-full p-2 rounded-lg bg-(--color-panel) text-sm
+            className="w-full p-2 rounded-lg bg-(--color-raised) text-sm
                        border border-(--color-line) outline-none resize-none
                        focus:border-(--color-accent)"
           />
-          {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
+          {error && <p className="text-xs text-(--color-danger)">{error}</p>}
           <Button type="submit" variant="primary" disabled={busy} className="w-full">
             {busy ? '…' : 'Создать'}
           </Button>

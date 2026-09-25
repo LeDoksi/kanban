@@ -100,7 +100,7 @@ export function EpicModal(
         </button>
       </div>
 
-      {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
+      {err && <p className="text-sm text-(--color-danger) mb-3">{err}</p>}
 
       {editingGoal ? (
         <textarea
@@ -111,7 +111,7 @@ export function EpicModal(
           onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveGoal(); }}
           rows={2}
           placeholder="цель"
-          className="w-full p-2 mb-3 rounded-lg bg-(--color-panel) text-sm
+          className="w-full p-2 mb-3 rounded-lg bg-(--color-raised) text-sm
                      border border-(--color-line) outline-none resize-none
                      focus:border-(--color-accent)"
         />
@@ -141,7 +141,7 @@ export function EpicModal(
             key={i.id}
             onClick={() => onOpenItem(i)}
             className="w-full flex items-center gap-2 text-left text-sm
-                       px-2 py-1.5 rounded hover:bg-(--color-panel)"
+                       px-2 py-1.5 rounded hover:bg-(--color-raised)"
           >
             <span className="text-2xs font-mono text-(--color-muted) w-10">
               {i.seq}
@@ -162,7 +162,7 @@ export function EpicModal(
       </div>
 
       <div className="flex mt-4 pt-3 border-t border-(--color-line)">
-        <button onClick={remove} className="text-xs text-(--color-danger-ink) ml-auto">
+        <button onClick={remove} className="text-xs text-(--color-danger) ml-auto">
           Удалить эпик
         </button>
       </div>

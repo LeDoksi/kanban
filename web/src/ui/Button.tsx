@@ -4,8 +4,8 @@ type Variant = 'primary' | 'secondary';
 type Size = 'sm' | 'md';
 
 const VARIANT: Record<Variant, string> = {
-  primary: 'bg-(--color-accent) text-(--color-ground)',
-  secondary: 'bg-(--color-panel) border border-(--color-line)',
+  primary: 'bg-(--color-accent) text-(--color-on-accent)',
+  secondary: 'bg-(--color-raised) border border-(--color-line)',
 };
 
 const SIZE: Record<Size, string> = {

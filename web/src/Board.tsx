@@ -283,7 +283,7 @@ export function Board() {
             </Editable>
           )
         )}
-        {err && <span className="text-sm text-(--color-danger-ink)">{err}</span>}
+        {err && <span className="text-sm text-(--color-danger)">{err}</span>}
         <span className="text-sm text-(--color-muted)">
           {items.filter(i => i.status === 'done').length}/{items.length}
         </span>
@@ -427,7 +427,7 @@ function Column(
                      sticky top-0 bg-(--color-ground) py-1 z-10">
         {col.label}
         {full.length > 0 && (
-          <span className="text-2xs px-1.5 rounded-full bg-(--color-panel)">
+          <span className="text-2xs px-1.5 rounded-full bg-(--color-raised)">
             {full.length}
           </span>
         )}
@@ -500,7 +500,7 @@ function CardPreview({ item }: { item: Item }) {
         </span>
         {item.type !== 'task' && (
           <span className="text-2xs px-1.5 py-px rounded
-                           bg-(--color-danger) text-(--color-danger-ink)">
+                           text-(--color-danger)">
             {item.type === 'bug' ? 'баг' : 'долг'}
           </span>
         )}
@@ -580,7 +580,7 @@ function Card(
           } ${
             committed
               ? 'bg-(--color-ink) text-(--color-ground)'
-              : 'bg-(--color-panel) text-(--color-muted)'
+              : 'bg-(--color-raised) text-(--color-muted)'
           }`}
         >
           <span>{dragX > 0 ? '→' : '←'}</span>
@@ -624,7 +624,7 @@ function Card(
             </span>
             {item.type !== 'task' && (
               <span className="text-2xs px-1.5 py-px rounded
-                               bg-(--color-danger) text-(--color-danger-ink)">
+                               text-(--color-danger)">
                 {item.type === 'bug' ? 'баг' : 'долг'}
               </span>
             )}

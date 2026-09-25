@@ -31,8 +31,8 @@ export function ProjectDrawer(
             key={project.id}
             onClick={() => { onSelect(project.id); onClose(); }}
             className={`w-full text-left text-sm px-3 py-2 rounded
-                       hover:bg-(--color-panel) ${
-              project.id === current ? 'bg-(--color-panel)' : ''
+                       hover:bg-(--color-raised) ${
+              project.id === current ? 'bg-(--color-raised)' : ''
             }`}
           >
             <div className="flex items-center gap-3">
