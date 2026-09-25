@@ -3,17 +3,19 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Item, Epic } from './supabase';
 import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
 import { DONE_SHOWN, recentDone } from './done';
-import { COLUMNS } from './columns';
-import { Card } from './Card';
+import { COLUMNS, EMPTY_TEXT } from './columns';
+import { Card, CardSkeleton } from './Card';
+import { STATUS_ICON } from './statusIcons';
 
 export function Column(
-  { col, items, epics, allItems, archivedCount, onChanged, onOpen, onOpenEpic, onShowArchive, bare }: {
+  { col, items, epics, allItems, archivedCount, onChanged, onOpen, onOpenEpic, onShowArchive, bare, loading }: {
     col: typeof COLUMNS[number]; items: Item[]; epics: Epic[]; allItems: Item[];
     archivedCount: number;
     onChanged: () => void;
     onOpen: (item: Item) => void; onOpenEpic: (epicId: string) => void;
     onShowArchive: () => void;
     bare: boolean;
+    loading: boolean;
   },
 ) {
   const { setNodeRef } = useDroppable({ id: col.key });
@@ -44,44 +46,52 @@ export function Column(
         </h2>
       )}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pb-28 lg:pb-6 -mx-1 px-1 pt-1">
-        <SortableContext
-          items={[...groups.flatMap(g => g.items), ...ungrouped].map(i => i.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-3">
-            {groups.map(({ epic, items: epicItems }) => (
-              <div key={epic.id} className="space-y-2">
+        {loading ? (
+          <div className="space-y-2">
+            <CardSkeleton /><CardSkeleton /><CardSkeleton />
+          </div>
+        ) : list.length === 0 && pinnedEmpty.length === 0 ? (
+          <EmptyColumn status={col.key} />
+        ) : (
+          <SortableContext
+            items={[...groups.flatMap(g => g.items), ...ungrouped].map(i => i.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-3">
+              {groups.map(({ epic, items: epicItems }) => (
+                <div key={epic.id} className="space-y-2">
+                  <button
+                    onClick={() => onOpenEpic(epic.id)}
+                    className="text-micro text-(--color-muted) hover:text-(--color-ink) underline mb-1 px-1 block"
+                  >
+                    {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
+                  </button>
+                  <div className="space-y-2">
+                    {epicItems.map(i => (
+                      <Card key={i.id} item={i} onChanged={onChanged} onOpen={onOpen} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {pinnedEmpty.map(epic => (
                 <button
+                  key={epic.id}
                   onClick={() => onOpenEpic(epic.id)}
-                  className="text-micro text-(--color-muted) hover:text-(--color-ink) underline mb-1 px-1 block"
+                  className="text-micro text-(--color-muted) hover:text-(--color-ink) underline px-1 block"
                 >
                   {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
                 </button>
+              ))}
+              {ungrouped.length > 0 && (
                 <div className="space-y-2">
-                  {epicItems.map(i => (
+                  {ungrouped.map(i => (
                     <Card key={i.id} item={i} onChanged={onChanged} onOpen={onOpen} />
                   ))}
                 </div>
-              </div>
-            ))}
-            {pinnedEmpty.map(epic => (
-              <button
-                key={epic.id}
-                onClick={() => onOpenEpic(epic.id)}
-                className="text-micro text-(--color-muted) hover:text-(--color-ink) underline px-1 block"
-              >
-                {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
-              </button>
-            ))}
-            {ungrouped.length > 0 && (
-              <div className="space-y-2">
-                {ungrouped.map(i => (
-                  <Card key={i.id} item={i} onChanged={onChanged} onOpen={onOpen} />
-                ))}
-              </div>
-            )}
-          </div>
-        </SortableContext>
+              )}
+            </div>
+          </SortableContext>
+        )}
         {capped && (hiddenDone > 0 || archivedCount > 0) && (
           <button
             onClick={onShowArchive}
@@ -92,5 +102,15 @@ export function Column(
         )}
       </div>
     </section>
+  );
+}
+
+function EmptyColumn({ status }: { status: Item['status'] }) {
+  const Icon = STATUS_ICON[status];
+  return (
+    <div className="flex flex-col items-center gap-2 text-center px-6 py-12 text-(--color-muted)">
+      <Icon size={28} />
+      <p className="text-meta max-w-60">{EMPTY_TEXT[status]}</p>
+    </div>
   );
 }

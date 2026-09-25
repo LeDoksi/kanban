@@ -103,6 +103,13 @@ for (const [vp, opt] of Object.entries(viewports)) {
   }
 }
 
+{
+  const { ctx, page } = await open({ ...viewports.desktop });
+  await switchTo(page, 'Кофейня');
+  await page.screenshot({ path: `${out}desktop-light-empty.png` });
+  await ctx.close();
+}
+
 await browser.close();
 await server.close();
 console.log(`shots → ${out}`);

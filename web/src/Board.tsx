@@ -42,6 +42,7 @@ export function Board() {
   // и без DragOverlay dnd-kit не рисует ничего под курсором ни над пустым
   // местом, ни над чужой колонкой — только над существующими карточками.
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   const isDesktop = useMedia('(min-width: 1024px)');
   const [activeColumn, setActiveColumn] = useState<Status>('backlog');
@@ -62,6 +63,7 @@ export function Board() {
     if (error) { toasts.show(error.message); return; }
     const list = (data ?? []) as Item[];
     setItems(list);
+    setLoaded(true);
     setOpenItem(prev => prev ? (list.find(i => i.id === prev.id) ?? prev) : null);
     if (columnPicked.current !== project) {
       columnPicked.current = project;
@@ -119,6 +121,7 @@ export function Board() {
   };
 
   useEffect(() => {
+    setLoaded(false);
     reload(current);
     reloadEpics(current);
     if (!current) return;
@@ -250,6 +253,7 @@ export function Board() {
       key={col.key}
       col={col}
       bare={bare}
+      loading={!loaded}
       items={items.filter(i => i.status === col.key && !i.archived_at)}
       epics={epics}
       allItems={items}

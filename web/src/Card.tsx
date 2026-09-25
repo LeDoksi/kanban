@@ -10,6 +10,18 @@ import { toasts } from './ui/toast';
 import { panelClass } from './ui/panel';
 import { TypeBadge } from './ui/TypeBadge';
 
+// Форма настоящей карточки, без шиммера: при медленной сети видно, что
+// доска грузится и какой она будет, а не пустые колонки.
+export function CardSkeleton() {
+  return (
+    <div aria-hidden className={panelClass('default', 'p-3 space-y-2.5')}>
+      <div className="h-3.5 w-4/5 rounded-full bg-(--color-raised)" />
+      <div className="h-3.5 w-3/5 rounded-full bg-(--color-raised)" />
+      <div className="h-3 w-14 rounded-full bg-(--color-raised)" />
+    </div>
+  );
+}
+
 // Плывущий клон под курсором во время drag — не подписан на useSortable
 // (это делает DragOverlay сам), поэтому просто статичная разметка без
 // обработчиков.
