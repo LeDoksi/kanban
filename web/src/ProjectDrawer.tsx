@@ -1,6 +1,8 @@
+import { X } from '@phosphor-icons/react';
 import type { Project } from './supabase';
 import { NewProject } from './NewProject';
 import { Sheet } from './ui/Sheet';
+import { Button } from './ui/Button';
 
 export type ProjectRow = { project: Project; total: number; done: number; waiting: number };
 
@@ -13,14 +15,10 @@ export function ProjectDrawer(
   return (
     <Sheet onClose={onClose} placement="left">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-medium">Проекты</h2>
-        <button
-          onClick={onClose}
-          aria-label="Закрыть"
-          className="text-(--color-muted) hover:text-(--color-ink) text-lg leading-none"
-        >
-          ×
-        </button>
+        <h2 className="text-title font-medium">Проекты</h2>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
+          <X size={20} />
+        </Button>
       </div>
 
       <NewProject onCreated={id => { onSelect(id); onClose(); }} />
@@ -30,9 +28,9 @@ export function ProjectDrawer(
           <button
             key={project.id}
             onClick={() => { onSelect(project.id); onClose(); }}
-            className={`w-full text-left text-sm px-3 py-2 rounded
-                       hover:bg-(--color-panel) ${
-              project.id === current ? 'bg-(--color-panel)' : ''
+            className={`w-full text-left text-body px-3 py-2 rounded
+                       hover:bg-(--color-raised) ${
+              project.id === current ? 'bg-(--color-raised)' : ''
             }`}
           >
             <div className="flex items-center gap-3">

@@ -1,62 +1,96 @@
 @import "tailwindcss";
 
-/* Тёплый контраст вместо плоского серого-на-сером. Один акцентный цвет
-   (тёплый янтарно-оранжевый) — статус «ждёт тебя», главное действие,
-   focus-состояния. `danger` остаётся отдельным красным.
+/* Стиль «B» (KAN-115): холодный серый фон, один тёплый акцент (терракота)
+   на главном действии и на «Нужно от тебя». danger — отдельный красный,
+   баг всегда несёт иконку, чтобы не путаться с акцентом.
 
    Тёмная тема — через обычный :root в @media, а не вложенный @theme:
    Tailwind v4 схлопывает @theme внутри @media в один :root и теряет
    медиа-запрос при сборке (проверено на собранном CSS). Обычный,
    не-layer'ный :root всегда перебивает @layer theme по правилам
-   cascade layers, независимо от порядка источников — так медиа-запрос
-   реально работает в рантайме. */
+   cascade layers, независимо от порядка источников. */
 @theme {
-  --color-ground: #fbf9f5;
-  --color-panel: #f1ece1;
-  --color-ink: #1c1712;
-  --color-muted: #78715f;
-  --color-line: #e6ddcc;
-  --color-accent: #9c5220;
-  --color-accent-ink: #9c5220;
-  --color-accent-soft: #f7e3cd;
-  --color-danger: #faecea;
-  --color-danger-ink: #a32d2d;
-  --color-overlay: rgb(28 23 18 / 0.45);
+  --color-ground: #eef0f2;
+  --color-surface: #ffffff;
+  --color-raised: #e4e7ea;
+  --color-ink: #1d2226;
+  --color-ink-2: #3a4148;
+  --color-muted: #5b646e;
+  --color-line: #dde1e5;
+  --color-accent: #c4532d;
+  --color-accent-ink: #a9441f;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #f6e4dc;
+  --color-danger: #c0392b;
+  --color-overlay: rgb(29 34 38 / 0.40);
+  --color-shadow: rgb(40 50 60 / 0.08);
 
-  /* Микро-подпись (11px) — четвёртый уровень шкалы поверх встроенных
-     Tailwind text-xs/text-sm/text-base. */
-  --text-2xs: 0.6875rem;
-  --text-2xs--line-height: 1rem;
+  /* Карточки без рамок: объект от фона отделяет тень в тон фона. */
+  --shadow-card: 0 1px 2px var(--color-shadow), 0 4px 14px -6px var(--color-shadow);
+  --shadow-menu: 0 2px 6px var(--color-shadow), 0 12px 32px -8px var(--color-shadow);
+
+  --font-sans: "Onest", ui-sans-serif, system-ui, sans-serif;
+
+  /* Пять ступеней вместо разрозненных text-xs/sm/base. */
+  --text-micro: 0.75rem;
+  --text-micro--line-height: 1rem;
+  --text-micro--font-weight: 500;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.125rem;
+  --text-meta--font-weight: 500;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.4;
+  --text-title: 1.125rem;
+  --text-title--line-height: 1.5rem;
+  --text-title--font-weight: 600;
+  --text-title-lg: 1.25rem;
+  --text-title-lg--line-height: 1.75rem;
+  --text-title-lg--font-weight: 600;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-ground: #16130f;
-    --color-panel: #221d15;
-    --color-ink: #f3ede1;
-    --color-muted: #978d78;
-    --color-line: #362f22;
-    --color-accent: #e08a42;
-    --color-accent-ink: #e08a42;
-    --color-accent-soft: #3c2810;
-    --color-danger: #3a1f1f;
-    --color-danger-ink: #f0a3a3;
-    --color-overlay: rgb(0 0 0 / 0.6);
+    --color-ground: #15171a;
+    --color-surface: #1f2327;
+    --color-raised: #2a2e33;
+    --color-ink: #eef0f2;
+    --color-ink-2: #cdd2d7;
+    --color-muted: #949da6;
+    --color-line: #2c3136;
+    --color-accent: #e2744f;
+    --color-accent-ink: #e8805d;
+    --color-on-accent: #15171a;
+    --color-accent-soft: #3a2419;
+    --color-danger: #f07a6c;
+    --color-overlay: rgb(0 0 0 / 0.60);
+    --color-shadow: rgb(0 0 0 / 0.45);
   }
 }
 
 body {
   background: var(--color-ground);
   color: var(--color-ink);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
 }
 
 /* iOS Safari приближает страницу при фокусе на поле со шрифтом меньше
    16px и сам обратно не отдаляет (KAN-114). На сенсорных экранах поля
-   получают 16px. !important — потому что text-sm/text-2xs висят классами
-   прямо на элементах и перебили бы селектор по тегу. */
+   получают 16px. !important — потому что text-body/text-micro висят
+   классами прямо на элементах и перебили бы селектор по тегу. */
 @media (pointer: coarse) {
   input, textarea, select {
     font-size: 16px !important;
   }
 }
+
+/* Долгое нажатие на карточку открывает наше меню; системное меню iOS
+   (выделить, поделиться) и выделение текста ему мешали бы. */
+.no-callout {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

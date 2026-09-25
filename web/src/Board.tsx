@@ -1,41 +1,37 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   DndContext, DragOverlay, type DragEndEvent,
   MouseSensor, useSensor, useSensors,
 } from '@dnd-kit/core';
-import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { sb, setStatus, closedAtFor } from './supabase';
+import { sb, closedAtFor } from './supabase';
 import type { Item, Project } from './supabase';
 import { CreateModal } from './CreateModal';
 import { TaskModal } from './TaskModal';
 import { ArchiveList } from './ArchiveList';
 import { EpicModal } from './EpicModal';
 import { ProjectDrawer, type ProjectRow } from './ProjectDrawer';
-import { Editable } from './Editable';
+import { BoardHeader } from './BoardHeader';
 import { between } from './position';
-import { groupItemsByEpic, emptyEpics, epicProgress } from './epics';
-import { DONE_SHOWN, recentDone, shownDoneIds } from './done';
-import { swipeTarget, swipePreview, lockAxis, SWIPE_THRESHOLD } from './swipe';
+import { shownDoneIds } from './done';
 import type { Epic } from './supabase';
-import { Button } from './ui/Button';
-import { AnimatePresence, motion } from 'motion/react';
-import { panelClass } from './ui/panel';
-
-const COLUMNS = [
-  { key: 'hold',    label: 'Hold' },
-  { key: 'backlog', label: 'Backlog' },
-  { key: 'doing',   label: 'В работе' },
-  { key: 'waiting', label: 'Нужно от тебя' },
-  { key: 'done',    label: 'Готово' },
-] as const;
+import { AnimatePresence } from 'motion/react';
+import { toasts } from './ui/toast';
+import { COLUMNS, STATUS_ORDER, type Status } from './columns';
+import {
+  storage, readLastProject, writeLastProject, pickProject,
+  readLastColumn, writeLastColumn, startColumn,
+} from './prefs';
+import { useMedia } from './useMedia';
+import { ColumnTabs } from './ColumnTabs';
+import { Lane } from './Lane';
+import { CardPreview } from './Card';
+import { Column } from './Column';
 
 export function Board() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [current, setCurrent] = useState<string>('');
   const [items, setItems] = useState<Item[]>([]);
   const [epics, setEpics] = useState<Epic[]>([]);
-  const [err, setErr] = useState('');
   const [openItem, setOpenItem] = useState<Item | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -46,35 +42,50 @@ export function Board() {
   // и без DragOverlay dnd-kit не рисует ничего под курсором ни над пустым
   // местом, ни над чужой колонкой — только над существующими карточками.
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-  // Ошибка держится на экране гарантированные несколько секунд, а не до
-  // ближайшего фонового reload() — иначе Realtime мог погасить её раньше,
-  // чем её успели прочитать.
-  useEffect(() => {
-    if (!err) return;
-    const t = setTimeout(() => setErr(''), 4000);
-    return () => clearTimeout(t);
-  }, [err]);
+  const isDesktop = useMedia('(min-width: 1024px)');
+  const [activeColumn, setActiveColumn] = useState<Status>('backlog');
+  // Последний current, актуальный сразу (не после ре-рендера) — чтобы
+  // reload/reloadEpics могли отбросить ответ, который пришёл уже после
+  // переключения на другой проект.
+  const currentRef = useRef(current);
+  useEffect(() => { currentRef.current = current; }, [current]);
+  // Стартовая колонка выбирается один раз на проект — по первой загрузке
+  // его задач, а не при каждом realtime-обновлении.
+  const columnPicked = useRef<string | null>(null);
+  const selectColumn = useCallback((s: Status) => {
+    setActiveColumn(s);
+    if (columnPicked.current) writeLastColumn(storage(), columnPicked.current, s);
+  }, []);
+  const selectColumnIndex = useCallback((i: number) => selectColumn(STATUS_ORDER[i]), [selectColumn]);
 
-  // Realtime дёргает reload() на любое изменение — если он гасит err
-  // сразу же, сообщение об ошибке живёт меньше секунды. Очищаем err
-  // отдельным таймером (ниже), а не тут.
   const reload = async (project: string) => {
     if (!project) return;
     const { data, error } = await sb.from('items').select('*')
       .eq('project_id', project)
       .order('position');
-    if (error) { setErr(error.message); return; }
+    // Пока ждали ответ, могли переключиться на другой проект — тогда
+    // этот ответ устарел, показывать его (даже ошибку) нельзя: иначе
+    // неудачная загрузка проекта B на миг покажет карточки A.
+    if (project !== currentRef.current) return;
+    if (error) { toasts.show(error.message); setLoaded(true); return; }
     const list = (data ?? []) as Item[];
     setItems(list);
+    setLoaded(true);
     setOpenItem(prev => prev ? (list.find(i => i.id === prev.id) ?? prev) : null);
+    if (columnPicked.current !== project) {
+      columnPicked.current = project;
+      setActiveColumn(startColumn(list, readLastColumn(storage(), project)));
+    }
   };
 
   const reloadEpics = async (project: string) => {
     if (!project) return;
     const { data, error } = await sb.from('epics').select('*')
       .eq('project_id', project).order('position');
-    if (error) { setErr(error.message); return; }
+    if (project !== currentRef.current) return;
+    if (error) { toasts.show(error.message); return; }
     setEpics((data ?? []) as Epic[]);
   };
 
@@ -86,13 +97,15 @@ export function Board() {
       sb.from('projects').select('*').is('archived_at', null).order('position'),
       sb.from('items').select('project_id, status, archived_at'),
     ]);
-    if (error) { setErr(error.message); return; }
+    if (error) { toasts.show(error.message); return; }
     const ps = (data ?? []) as Project[];
     setProjects(ps);
-    if (!keepCurrent && ps.length) setCurrent(ps[0].id);
-    if (keepCurrent && !current && ps.length) setCurrent(ps[0].id);
+    if (!keepCurrent || !current) {
+      const id = pickProject(ps, readLastProject(storage()));
+      if (id) setCurrent(id);
+    }
 
-    if (iErr) { setErr(iErr.message); return; }
+    if (iErr) { toasts.show(iErr.message); return; }
     const all = allItems ?? [];
     setProjectRows(ps.map(project => {
       const mine = all.filter(i => i.project_id === project.id);
@@ -107,30 +120,23 @@ export function Board() {
 
   useEffect(() => { reloadProjects(false); }, []);
 
+  useEffect(() => { if (current) writeLastProject(storage(), current); }, [current]);
+
   const currentProject = projects.find(p => p.id === current) ?? null;
 
-  const [editingDescription, setEditingDescription] = useState(false);
-  const [descriptionDraft, setDescriptionDraft] = useState('');
-
-  // Сбрасывать черновик при смене проекта или при обновлении описания
-  // с сервера — иначе после переключения проекта в textarea мог бы
-  // остаться текст от предыдущего.
-  useEffect(() => {
-    setEditingDescription(false);
-    setDescriptionDraft(currentProject?.description ?? '');
-  }, [current, currentProject?.description]);
-
-  const saveDescription = async () => {
-    setEditingDescription(false);
-    const clean = descriptionDraft.trim() || null;
-    if (!currentProject || clean === currentProject.description) return;
-    const { error } = await sb.from('projects')
-      .update({ description: clean }).eq('id', current);
-    if (error) { setErr(error.message); return; }
+  const saveDescription = async (description: string | null) => {
+    const { error } = await sb.from('projects').update({ description }).eq('id', current);
+    if (error) { toasts.show(error.message); return; }
     reloadProjects();
   };
 
   useEffect(() => {
+    setLoaded(false);
+    // Очищаем карточки/эпики сразу при смене проекта — иначе неудачная
+    // (или медленная) загрузка проекта B ещё какое-то время показывает
+    // карточки A под новым заголовком.
+    setItems([]);
+    setEpics([]);
     reload(current);
     reloadEpics(current);
     if (!current) return;
@@ -181,6 +187,8 @@ export function Board() {
   const doneShownIds = shownDoneIds(items);
   const activeItem = activeId ? items.find(i => i.id === activeId) ?? null : null;
   const archivedCount = items.filter(i => i.archived_at).length;
+  const counts = Object.fromEntries(STATUS_ORDER.map(s =>
+    [s, items.filter(i => i.status === s && !i.archived_at).length])) as Record<Status, number>;
   const archiveItems = items
     .filter(i => i.archived_at || (i.status === 'done' && !doneShownIds.has(i.id)))
     .sort((a, b) =>
@@ -251,71 +259,57 @@ export function Board() {
     setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...patch } : i));
 
     const { error } = await sb.from('items').update(patch).eq('id', itemId);
-    if (error) { setErr(error.message); reload(current); return; }
+    if (error) { toasts.show(error.message); reload(current); return; }
     reload(current);
   };
 
-  return (
-    <div className="min-h-dvh p-4 md:p-6 max-w-6xl mx-auto">
-      <header className="flex items-center gap-3 mb-5 flex-wrap">
-        <Button variant="secondary" onClick={() => setShowProjects(true)}>
-          {currentProject?.name ?? 'Проекты'}
-        </Button>
-        {currentProject && (
-          editingDescription ? (
-            <textarea
-              autoFocus
-              value={descriptionDraft}
-              onChange={e => setDescriptionDraft(e.target.value)}
-              onBlur={saveDescription}
-              onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveDescription(); }}
-              rows={2}
-              placeholder="описание"
-              className="text-sm bg-transparent border border-(--color-line)
-                         rounded-lg p-1 outline-none resize-none"
-            />
-          ) : (
-            <Editable
-              onEdit={() => setEditingDescription(true)}
-              className="text-sm text-(--color-muted) cursor-text"
-            >
-              {currentProject.description || 'описание — клик, чтобы добавить'}
-            </Editable>
-          )
-        )}
-        {err && <span className="text-sm text-(--color-danger-ink)">{err}</span>}
-        <span className="text-sm text-(--color-muted)">
-          {items.filter(i => i.status === 'done').length}/{items.length}
-        </span>
-        <Button variant="primary" className="ml-auto" onClick={() => setShowCreate(true)}>
-          Новая задача
-        </Button>
-      </header>
+  const renderColumn = (col: typeof COLUMNS[number], bare: boolean) => (
+    <Column
+      key={col.key}
+      col={col}
+      bare={bare}
+      loading={!loaded}
+      items={items.filter(i => i.status === col.key && !i.archived_at)}
+      epics={epics}
+      allItems={items}
+      archivedCount={archivedCount}
+      onChanged={() => reload(current)}
+      onOpen={setOpenItem}
+      onOpenEpic={id => setViewEpic(id)}
+      onShowArchive={() => setShowArchive(true)}
+    />
+  );
 
-      {/* Телефон — одна вертикаль, десктоп — пять колонок. */}
+  return (
+    <div className="h-dvh flex flex-col max-w-[1440px] mx-auto">
+      <BoardHeader
+        project={currentProject}
+        done={items.filter(i => i.status === 'done').length}
+        total={items.length}
+        onOpenProjects={() => setShowProjects(true)}
+        onCreate={() => setShowCreate(true)}
+        onSaveDescription={saveDescription}
+      />
+
+      {/* Телефон — вкладки и лента с одной колонкой на экран, десктоп — сетка из пяти. */}
       <DndContext
         sensors={sensors}
         onDragStart={e => setActiveId(e.active.id as string)}
         onDragEnd={onDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="grid gap-3 md:grid-cols-5">
-          {COLUMNS.map(col => (
-            <Column
-              key={col.key}
-              col={col}
-              items={items.filter(i => i.status === col.key && !i.archived_at)}
-              epics={epics}
-              allItems={items}
-              archivedCount={archivedCount}
-              onChanged={() => reload(current)}
-              onError={setErr}
-              onOpen={setOpenItem}
-              onOpenEpic={id => setViewEpic(id)}
-              onShowArchive={() => setShowArchive(true)}
-            />
-          ))}
-        </div>
+        {isDesktop ? (
+          <div className="flex-1 min-h-0 grid grid-cols-5 gap-4 px-6">
+            {COLUMNS.map(col => renderColumn(col, false))}
+          </div>
+        ) : (
+          <>
+            <ColumnTabs counts={counts} active={activeColumn} onSelect={selectColumn} />
+            <Lane active={STATUS_ORDER.indexOf(activeColumn)} onActiveChange={selectColumnIndex}>
+              {COLUMNS.map(col => renderColumn(col, true))}
+            </Lane>
+          </>
+        )}
         <DragOverlay>
           {activeItem && <CardPreview item={activeItem} />}
         </DragOverlay>
@@ -344,7 +338,7 @@ export function Board() {
             onRestore={async i => {
               const { error } = await sb.from('items')
                 .update({ status: 'doing', archived_at: null }).eq('id', i.id);
-              if (error) { setErr(error.message); return; }
+              if (error) { toasts.show(error.message); return; }
               reload(current);
             }}
             onClose={() => setShowArchive(false)}
@@ -390,255 +384,3 @@ export function Board() {
   );
 }
 
-function Column(
-  { col, items, epics, allItems, archivedCount, onChanged, onError, onOpen, onOpenEpic, onShowArchive }: {
-    col: typeof COLUMNS[number]; items: Item[]; epics: Epic[]; allItems: Item[];
-    archivedCount: number;
-    onChanged: () => void; onError: (msg: string) => void;
-    onOpen: (item: Item) => void; onOpenEpic: (epicId: string) => void;
-    onShowArchive: () => void;
-  },
-) {
-  const { setNodeRef } = useDroppable({ id: col.key });
-
-  // «Готово» — единственная колонка, которая обрезается: открытые задачи
-  // не должны прятаться, а закрытых со временем становится много.
-  // items уже отфильтрованы до status===col.key && !archived_at в Board —
-  // recentDone() лишь досортирует по дате закрытия. Группировка по эпику —
-  // уже поверх этого обрезанного списка, кап не меняется.
-  const capped = col.key === 'done';
-  const full = capped ? recentDone(items) : items;
-  const list = capped ? full.slice(0, DONE_SHOWN) : full;
-  const hiddenDone = capped ? full.length - list.length : 0;
-
-  const groups = groupItemsByEpic(list, epics);
-  const groupedIds = new Set(groups.flatMap(g => g.items.map(i => i.id)));
-  const ungrouped = list.filter(i => !groupedIds.has(i.id));
-  // Пустые эпики (ни одной задачи вообще) торчат только в Backlog —
-  // это их «домашняя» колонка, иначе эпик без задач нигде не виден.
-  const pinnedEmpty = col.key === 'backlog' ? emptyEpics(epics, allItems) : [];
-
-  return (
-    <section
-      ref={setNodeRef}
-      className="rounded-lg border border-(--color-line) p-2"
-    >
-      <h2 className="text-xs text-(--color-muted) mb-2 px-1 flex items-center gap-1.5
-                     sticky top-0 bg-(--color-ground) py-1 z-10">
-        {col.label}
-        {full.length > 0 && (
-          <span className="text-2xs px-1.5 rounded-full bg-(--color-panel)">
-            {full.length}
-          </span>
-        )}
-      </h2>
-      <SortableContext
-        items={[...groups.flatMap(g => g.items), ...ungrouped].map(i => i.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div className="space-y-3">
-          {groups.map(({ epic, items: epicItems }) => (
-            // Рамка вокруг всей группы — иначе не видно, где кончаются
-            // задачи эпика и начинаются несвязанные (выглядели одинаково,
-            // отличаясь только подписью сверху).
-            <div key={epic.id} className="rounded-lg border border-(--color-line) p-1.5">
-              <button
-                onClick={() => onOpenEpic(epic.id)}
-                className="text-2xs text-(--color-muted) hover:text-(--color-ink) underline mb-1 px-1 block"
-              >
-                {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
-              </button>
-              <div className="space-y-2">
-                {epicItems.map(i => (
-                  <Card key={i.id} item={i} onChanged={onChanged} onError={onError} onOpen={onOpen} />
-                ))}
-              </div>
-            </div>
-          ))}
-          {pinnedEmpty.map(epic => (
-            <button
-              key={epic.id}
-              onClick={() => onOpenEpic(epic.id)}
-              className="text-2xs text-(--color-muted) hover:text-(--color-ink) underline px-1 block"
-            >
-              {epic.title} ({epicProgress(epic.id, allItems).done}/{epicProgress(epic.id, allItems).total})
-            </button>
-          ))}
-          {ungrouped.length > 0 && (
-            <div className="space-y-2">
-              {ungrouped.map(i => (
-                <Card key={i.id} item={i} onChanged={onChanged} onError={onError} onOpen={onOpen} />
-              ))}
-            </div>
-          )}
-        </div>
-      </SortableContext>
-      {capped && (hiddenDone > 0 || archivedCount > 0) && (
-        <button
-          onClick={onShowArchive}
-          className="text-xs text-(--color-muted) hover:text-(--color-ink) mt-2 px-1"
-        >
-          ещё {hiddenDone + archivedCount} · архив
-        </button>
-      )}
-    </section>
-  );
-}
-
-// Плывущий клон под курсором во время drag — не подписан на useSortable
-// (это делает DragOverlay сам), поэтому просто статичная разметка без
-// обработчиков.
-function CardPreview({ item }: { item: Item }) {
-  const waiting = item.status === 'waiting';
-  return (
-    <article className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-sm shadow-lg rotate-1')}>
-      <div className="flex items-center gap-1.5 mb-1">
-        <span className={`text-2xs font-mono ${
-          waiting ? 'text-(--color-accent-ink)' : 'text-(--color-muted)'
-        }`}>
-          {item.seq}
-        </span>
-        {item.type !== 'task' && (
-          <span className="text-2xs px-1.5 py-px rounded
-                           bg-(--color-danger) text-(--color-danger-ink)">
-            {item.type === 'bug' ? 'баг' : 'долг'}
-          </span>
-        )}
-      </div>
-      <p className={waiting ? 'text-(--color-accent-ink)' : ''}>{item.title}</p>
-    </article>
-  );
-}
-
-function Card(
-  { item, onChanged, onError, onOpen }: {
-    item: Item; onChanged: () => void; onError: (msg: string) => void;
-    onOpen: (item: Item) => void;
-  },
-) {
-  const done = item.checklist.filter(s => s.done).length;
-  const waiting = item.status === 'waiting';
-  // transition: null — как в официальном примере dnd-kit + Framer Motion:
-  // dnd-kit больше не пишет свой CSS-transition, всю анимацию позиции
-  // (в т.ч. после onDragEnd/reload(), когда сам dnd-kit уже молчит) ведёт
-  // motion через layoutId.
-  const { listeners, setNodeRef, transform, isDragging } =
-    useSortable({ id: item.id, transition: null });
-
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [axis, setAxis] = useState<'x' | 'y' | null>(null);
-  const [dragX, setDragX] = useState(0);
-  const swiping = touchStart !== null;
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-    setAxis(null);
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStart === null || axis === 'y') return;
-    const dx = e.touches[0].clientX - touchStart.x;
-    const dy = e.touches[0].clientY - touchStart.y;
-    const locked = axis ?? lockAxis(dx, dy);
-    if (locked !== axis) setAxis(locked);
-    if (locked === 'x') setDragX(dx);
-  };
-  const resetTouch = () => {
-    setTouchStart(null);
-    setAxis(null);
-    setDragX(0);
-  };
-  const onTouchEnd = () => {
-    if (axis === 'x' && target) move(target);
-    resetTouch();
-  };
-
-  // target — с порогом, решает, что случится на onTouchEnd. preview —
-  // без порога, только для панели: та открывается с первого пикселя
-  // свайпа, а не выстреливает внезапно после срабатывания.
-  const target = swipeTarget(item.status, dragX);
-  const preview = swipePreview(item.status, dragX);
-  const committed = Math.abs(dragX) > SWIPE_THRESHOLD;
-
-  const move = async (status: Item['status']) => {
-    const { error } = await setStatus(item.id, status);
-    // Молчаливый отказ выглядел бы как «карточка сама вернулась назад».
-    if (error) { onError(error.message); return; }
-    onChanged();
-  };
-
-  return (
-    // Панель со следующим статусом лежит позади карточки и открывается
-    // по мере сдвига — раньше подсказка была приклеена к самой карточке
-    // и уезжала с ней к краю экрана, толком не успевая показаться.
-    <div className="relative">
-      {preview && (
-        <div
-          aria-hidden
-          className={`absolute inset-0 rounded-lg flex items-center gap-1.5 px-3
-                     text-sm font-medium overflow-hidden ${
-            dragX > 0 ? 'justify-start' : 'justify-end'
-          } ${
-            committed
-              ? 'bg-(--color-ink) text-(--color-ground)'
-              : 'bg-(--color-panel) text-(--color-muted)'
-          }`}
-        >
-          <span>{dragX > 0 ? '→' : '←'}</span>
-          <span>{COLUMNS.find(c => c.key === preview)?.label}</span>
-        </div>
-      )}
-      <motion.article
-        ref={setNodeRef}
-        layoutId={item.id}
-        role="button"
-        tabIndex={0}
-        onKeyDown={e => {
-          if (e.target !== e.currentTarget) return;
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item); }
-        }}
-        animate={{
-          x: transform?.x ?? 0,
-          y: transform?.y ?? 0,
-          zIndex: isDragging ? 10 : 0,
-          opacity: isDragging ? 0.5 : 1,
-        }}
-        transition={{ duration: isDragging ? 0 : 0.2, ease: 'easeOut' }}
-        {...listeners}
-        onClick={() => onOpen(item)}
-        className={panelClass(waiting ? 'accent' : 'default', 'p-2.5 text-sm cursor-grab')}
-      >
-        <motion.div
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          onTouchCancel={resetTouch}
-          animate={{ x: dragX }}
-          transition={swiping ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 32 }}
-          className="touch-pan-y"
-        >
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className={`text-2xs font-mono ${
-              waiting ? 'text-(--color-accent-ink)' : 'text-(--color-muted)'
-            }`}>
-              {item.seq}
-            </span>
-            {item.type !== 'task' && (
-              <span className="text-2xs px-1.5 py-px rounded
-                               bg-(--color-danger) text-(--color-danger-ink)">
-                {item.type === 'bug' ? 'баг' : 'долг'}
-              </span>
-            )}
-          </div>
-
-          <p className={waiting ? 'text-(--color-accent-ink)' : ''}>{item.title}</p>
-
-          {item.checklist.length > 0 && (
-            <p className="text-2xs text-(--color-muted) mt-1.5">
-              {done}/{item.checklist.length}
-            </p>
-          )}
-        </motion.div>
-      </motion.article>
-    </div>
-  );
-}

@@ -1,5 +1,7 @@
+import { X } from '@phosphor-icons/react';
 import type { Item } from './supabase';
 import { Sheet } from './ui/Sheet';
+import { Button } from './ui/Button';
 
 function Row(
   { item, onOpen, onRestore }: {
@@ -9,13 +11,13 @@ function Row(
   return (
     <div
       className="flex items-center gap-2 px-2 py-1.5 rounded
-                 hover:bg-(--color-panel)"
+                 hover:bg-(--color-raised)"
     >
       <button
         onClick={() => onOpen(item)}
-        className="flex-1 text-left text-sm"
+        className="flex-1 text-left text-body"
       >
-        <span className="text-2xs font-mono text-(--color-muted) mr-2">
+        <span className="text-micro font-mono text-(--color-muted) mr-2">
           {item.id}
         </span>
         {item.title}
@@ -23,7 +25,7 @@ function Row(
       {item.archived_at && (
         <button
           onClick={() => onRestore(item)}
-          className="text-2xs text-(--color-muted) hover:text-(--color-ink) underline shrink-0"
+          className="text-micro text-(--color-muted) hover:text-(--color-ink) underline shrink-0"
         >
           вернуть в работу
         </button>
@@ -47,23 +49,19 @@ export function ArchiveList(
   return (
     <Sheet onClose={onClose} maxWidth="max-w-lg">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-medium">Архив</h2>
-        <button
-          onClick={onClose}
-          aria-label="Закрыть"
-          className="text-(--color-muted) hover:text-(--color-ink) text-lg leading-none"
-        >
-          ×
-        </button>
+        <h2 className="text-title font-medium">Архив</h2>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
+          <X size={20} />
+        </Button>
       </div>
 
       {items.length === 0 && (
-        <p className="text-sm text-(--color-muted)">Пусто.</p>
+        <p className="text-body text-(--color-muted)">Пусто.</p>
       )}
 
       {overflow.length > 0 && (
         <div className="mb-4">
-          <h3 className="text-2xs text-(--color-muted) mb-1 px-1">
+          <h3 className="text-micro text-(--color-muted) mb-1 px-1">
             Готово — не поместилось в колонку
           </h3>
           <div className="space-y-1">
@@ -76,7 +74,7 @@ export function ArchiveList(
 
       {archived.length > 0 && (
         <div>
-          <h3 className="text-2xs text-(--color-muted) mb-1 px-1">
+          <h3 className="text-micro text-(--color-muted) mb-1 px-1">
             В архиве
           </h3>
           <div className="space-y-1">

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { MotionConfig } from 'motion/react';
 import { sb } from './supabase';
 import { Board } from './Board';
 import { Button } from './ui/Button';
+import { Toaster } from './ui/Toaster';
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -18,8 +20,15 @@ export function App() {
   }, []);
 
   if (!ready) return null;
-  if (!session) return <SignIn />;
-  return <Board />;
+  return (
+    // reducedMotion="user" — единая точка: все motion-компоненты дерева
+    // (включая Toaster) сами уважают prefers-reduced-motion, без
+    // проверки в каждом из них по отдельности.
+    <MotionConfig reducedMotion="user">
+      {session ? <Board /> : <SignIn />}
+      <Toaster />
+    </MotionConfig>
+  );
 }
 
 function SignIn() {
@@ -37,8 +46,8 @@ function SignIn() {
   return (
     <div className="min-h-dvh grid place-items-center p-6">
       <div className="w-full max-w-72 space-y-3 text-center">
-        <h1 className="text-base font-medium">Канбан</h1>
-        {error && <p className="text-xs text-(--color-danger-ink)">{error}</p>}
+        <h1 className="text-title font-medium">Канбан</h1>
+        {error && <p className="text-meta text-(--color-danger)">{error}</p>}
         <Button onClick={signIn} variant="primary" className="w-full">
           Войти через Google
         </Button>

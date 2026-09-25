@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { X } from '@phosphor-icons/react';
 import { sb } from './supabase';
 import type { Item, Epic } from './supabase';
 import { epicProgress } from './epics';
 import { Editable } from './Editable';
 import { Sheet } from './ui/Sheet';
+import { Button } from './ui/Button';
 
 export function EpicModal(
   { epicId, onClose, onOpenItem }: {
@@ -91,16 +93,12 @@ export function EpicModal(
             </Editable>
           )}
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Закрыть"
-          className="text-(--color-muted) hover:text-(--color-ink) text-lg leading-none"
-        >
-          ×
-        </button>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="-mr-2 -mt-1">
+          <X size={20} />
+        </Button>
       </div>
 
-      {err && <p className="text-sm text-(--color-danger-ink) mb-3">{err}</p>}
+      {err && <p className="text-body text-(--color-danger) mb-3">{err}</p>}
 
       {editingGoal ? (
         <textarea
@@ -111,7 +109,7 @@ export function EpicModal(
           onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) saveGoal(); }}
           rows={2}
           placeholder="цель"
-          className="w-full p-2 mb-3 rounded-lg bg-(--color-panel) text-sm
+          className="w-full p-2 mb-3 rounded-lg bg-(--color-raised) text-body
                      border border-(--color-line) outline-none resize-none
                      focus:border-(--color-accent)"
         />
@@ -119,13 +117,13 @@ export function EpicModal(
         <Editable
           as="p"
           onEdit={() => setEditingGoal(true)}
-          className="text-sm text-(--color-muted) mb-3 cursor-text min-h-[1.3em]"
+          className="text-body text-(--color-muted) mb-3 cursor-text min-h-[1.3em]"
         >
           {epic?.goal || 'цель — клик, чтобы добавить'}
         </Editable>
       )}
 
-      <div className="flex items-center gap-3 mb-5 text-sm text-(--color-muted)">
+      <div className="flex items-center gap-3 mb-5 text-body text-(--color-muted)">
         <span>{done}/{total}</span>
         {epic?.plan_path && (
           <a href={epic.plan_path} className="text-(--color-ink) underline">план</a>
@@ -140,29 +138,29 @@ export function EpicModal(
           <button
             key={i.id}
             onClick={() => onOpenItem(i)}
-            className="w-full flex items-center gap-2 text-left text-sm
-                       px-2 py-1.5 rounded hover:bg-(--color-panel)"
+            className="w-full flex items-center gap-2 text-left text-body
+                       px-2 py-1.5 rounded hover:bg-(--color-raised)"
           >
-            <span className="text-2xs font-mono text-(--color-muted) w-10">
+            <span className="text-micro font-mono text-(--color-muted) w-10">
               {i.seq}
             </span>
             <span className={i.status === 'done' ? 'text-(--color-muted)' : ''}>
               {i.title}
             </span>
             {i.checklist.length > 0 && (
-              <span className="ml-auto text-2xs text-(--color-muted)">
+              <span className="ml-auto text-micro text-(--color-muted)">
                 {i.checklist.filter(s => s.done).length}/{i.checklist.length}
               </span>
             )}
           </button>
         ))}
         {items.length === 0 && (
-          <p className="text-sm text-(--color-muted)">Пока без задач.</p>
+          <p className="text-body text-(--color-muted)">Пока без задач.</p>
         )}
       </div>
 
       <div className="flex mt-4 pt-3 border-t border-(--color-line)">
-        <button onClick={remove} className="text-xs text-(--color-danger-ink) ml-auto">
+        <button onClick={remove} className="text-meta text-(--color-danger) ml-auto">
           Удалить эпик
         </button>
       </div>
