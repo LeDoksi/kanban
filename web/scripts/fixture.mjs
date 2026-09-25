@@ -45,6 +45,12 @@ export const items = [
   item('folio', 'PF', 'done', 'Настроить GitHub Pages', {}),
   item('folio', 'PF', 'done', 'Логотип в SVG', {}),
   item('folio', 'PF', 'done', 'Шрифты: подключить локально', { type: 'chore' }),
+  // Ещё готовые сверх DONE_SHOWN (5) и настоящий архив — чтобы в снимках
+  // была видна кнопка «Архив · N» и обе секции шторки архива.
+  item('folio', 'PF', 'done', 'Фавикон для сайта', {}),
+  item('folio', 'PF', 'done', 'Ёлка на главной ко Дню города', {}),
+  item('folio', 'PF', 'done', 'Обновить копирайт в футере', {}),
+  item('folio', 'PF', 'done', 'Меню кофейни в футере со ссылкой', { archived_at: ago(50) }),
 ];
 
 export const comments = [
