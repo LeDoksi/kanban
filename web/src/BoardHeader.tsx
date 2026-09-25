@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CaretDown, Plus } from '@phosphor-icons/react';
 import type { Project } from './supabase';
 import { Button } from './ui/Button';
@@ -16,6 +16,13 @@ export function BoardHeader(
 ) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(project?.description ?? '');
+  // Enter/Escape в onKeyDown снимают editing и убирают <input> из DOM —
+  // это само может вызвать blur того же поля, и onBlur={save} отработал бы
+  // второй раз с тем же черновиком (двойной PATCH на Enter) или вообще
+  // сохранил бы то, что должен был отменить Escape. Флаг «уже обработали
+  // эту сессию редактирования» ставится в onKeyDown и проверяется в onBlur;
+  // сбрасывается при входе в редактирование.
+  const handledRef = useRef(false);
 
   // Сбрасывать черновик при смене проекта или при обновлении описания
   // с сервера — иначе в поле мог бы остаться текст другого проекта.
@@ -25,9 +32,17 @@ export function BoardHeader(
   }, [project?.id, project?.description]);
 
   const save = () => {
+    if (handledRef.current) return;
+    handledRef.current = true;
     setEditing(false);
     const clean = draft.trim() || null;
     if (project && clean !== project.description) onSaveDescription(clean);
+  };
+
+  const cancel = () => {
+    handledRef.current = true;
+    setEditing(false);
+    setDraft(project?.description ?? '');
   };
 
   return (
@@ -50,14 +65,14 @@ export function BoardHeader(
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onBlur={save}
-              onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+              onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); }}
               placeholder="описание проекта"
               className="w-full h-9 px-3 rounded-xl bg-(--color-raised) text-body outline-none
                          focus:ring-2 focus:ring-(--color-accent)"
             />
           ) : (
             <Editable
-              onEdit={() => setEditing(true)}
+              onEdit={() => { handledRef.current = false; setEditing(true); }}
               className="block truncate text-body text-(--color-muted) cursor-text"
             >
               {project.description || 'Добавить описание'}
